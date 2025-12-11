@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Stoned Rabbits: Idle Empire</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐰</text></svg>">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Header -->
+        <header id="header">
+            <h1>🐰 Stoned Rabbits: Idle Empire</h1>
+            <div id="currency-display">
+                <div id="dust-amount">Magic Dust: <span id="dust-value">0</span></div>
+                <div id="production-rate">+<span id="rate-value">0</span>/sec</div>
+            </div>
+        </header>
+
+        <!-- Main Building Area -->
+        <main id="building-area">
+            <div id="rabbit-farm" class="building">
+                <div class="building-icon">
+                    <img src="rabbit-captain.jpg" alt="Stoned Rabbit" class="rabbit-nft">
+                </div>
+                <h2 id="building-name">Rabbit Farm</h2>
+                <div class="building-stats">
+                    <div>Level: <span id="building-level">1</span></div>
+                    <div>Produces: <span id="building-production">1</span>/sec</div>
+                </div>
+                <div class="accumulated-dust">
+                    Ready to collect: <span id="accumulated-dust">0</span>
+                </div>
+                <div class="building-buttons">
+                    <button id="collect-btn" class="game-btn collect-btn">
+                        <span class="btn-icon">✨</span>
+                        <span class="btn-text">Collect</span>
+                    </button>
+                    <button id="upgrade-btn" class="game-btn upgrade-btn">
+                        <span class="btn-icon">⬆️</span>
+                        <span class="btn-text">Upgrade: <span id="upgrade-cost">10</span></span>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Offline Earnings Modal -->
+        <div id="offline-modal" class="modal hidden">
+            <div class="modal-content">
+                <img src="rabbit-captain.jpg" alt="Stoned Rabbit" class="modal-rabbit">
+                <h2>Welcome Back!</h2>
+                <p>While you were away, your rabbits collected:</p>
+                <div id="offline-earnings" class="big-number">0</div>
+                <p>Magic Dust!</p>
+                <button id="claim-offline-btn" class="game-btn collect-btn">Claim!</button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer id="footer">
+            <div id="stats">
+                <span>Total Earned: <span id="total-earned">0</span></span>
+                <span>Prestiges: <span id="prestige-count">0</span></span>
+            </div>
+            <div id="footer-buttons">
+                <button id="reset-btn" class="reset-btn">Reset Progress</button>
+            </div>
+            <div id="version">MVP Phase 1 - v0.1.1</div>
+        </footer>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

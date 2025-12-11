@@ -1,0 +1,61 @@
+sprint_number: 1
+start_date: "2025-12-11"
+duration: "1 week"
+goal: "Establish Core Production Loop (Generate Dust, Upgrade Buildings)"
+status: "planning"
+
+epics:
+  - id: "epic-1"
+    name: "Core Production"
+    description: "Fundamental systems for currency generation and building upgrades."
+    status: "active"
+    stories:
+      - id: "story-1-1"
+        name: "Project Setup"
+        description: "Initialize Unity project, folder structure, and git repository."
+        points: 1
+        status: "todo"
+        assignee: "Game Developer"
+      
+      - id: "story-1-2"
+        name: "Magic Dust System (Currency)"
+        description: "Implement CurrencyManager with BigNumber support for Magic Dust."
+        points: 3
+        status: "todo"
+        assignee: "Game Developer"
+
+      - id: "story-1-3"
+        name: "Building Data Structure"
+        description: "Create ScriptableObject definitions for Buildings (Base Cost, Production)."
+        points: 2
+        status: "todo"
+        assignee: "Game Developer"
+
+      - id: "story-1-4"
+        name: "Basic Production Logic"
+        description: "Implement logic for passive dust generation based on building levels."
+        points: 5
+        status: "todo"
+        assignee: "Game Developer"
+
+      - id: "story-1-5"
+        name: "Click Interaction"
+        description: "Implement tap-to-collect mechanics."
+        points: 2
+        status: "todo"
+        assignee: "Game Developer"
+
+      - id: "story-1-6"
+        name: "Basic HUD"
+        description: "Create UI to display current Magic Dust and Production Rate."
+        points: 3
+        status: "todo"
+        assignee: "Game Developer"
+
+risks:
+  - "BigNumber implementation might be tricky for very large numbers."
+  - "UI scaling needs to be handled early for different aspect ratios."
+
+notes:
+  - Focus on functionality over polish for Week 1.
+  - Use placeholder art (colored squares) if needed.
