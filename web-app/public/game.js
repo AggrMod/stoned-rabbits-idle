@@ -95,25 +95,61 @@ const GameState = {
             id: 'rabbit-farm',
             name: 'Rabbit Farm',
             level: 1,
-            baseCost: 50,  // Balanced: ~30-45s per upgrade
+            baseCost: 50,
             baseProduction: 1,
-            costGrowthFactor: 1.07,  // GDD spec: costs grow slowly
-            productionGrowthFactor: 1.15,  // GDD spec: production grows faster
+            costGrowthFactor: 1.07,
+            productionGrowthFactor: 1.15,
             accumulatedDust: 0,
             unlocked: true,
             unlockRequirement: null
         },
         {
-            id: 'energy-extractor',
-            name: 'Energy Extractor',
-            level: 0,  // 0 = not yet purchased
-            baseCost: 2500,  // Significant investment at L10 unlock
-            baseProduction: 5,
-            costGrowthFactor: 1.07,  // GDD spec
-            productionGrowthFactor: 1.15,  // GDD spec
+            id: 'weed-patch',
+            name: 'Weed Patch',
+            level: 0,
+            baseCost: 1000,
+            baseProduction: 10,
+            costGrowthFactor: 1.08,
+            productionGrowthFactor: 1.15,
             accumulatedDust: 0,
             unlocked: false,
-            unlockRequirement: { buildingId: 'rabbit-farm', level: 10 }
+            unlockRequirement: { buildingId: 'rabbit-farm', level: 15 }
+        },
+        {
+            id: 'bake-shop',
+            name: 'Bake Shop',
+            level: 0,
+            baseCost: 15000,
+            baseProduction: 80,
+            costGrowthFactor: 1.09,
+            productionGrowthFactor: 1.15,
+            accumulatedDust: 0,
+            unlocked: false,
+            unlockRequirement: { buildingId: 'weed-patch', level: 15 }
+        },
+        {
+            id: 'infused-field',
+            name: 'Infused Field',
+            level: 0,
+            baseCost: 200000,
+            baseProduction: 500,
+            costGrowthFactor: 1.10,
+            productionGrowthFactor: 1.16,
+            accumulatedDust: 0,
+            unlocked: false,
+            unlockRequirement: { buildingId: 'bake-shop', level: 15 }
+        },
+        {
+            id: 'energy-extractor',
+            name: 'Energy Extractor',
+            level: 0,
+            baseCost: 2500000,
+            baseProduction: 3000,
+            costGrowthFactor: 1.12,
+            productionGrowthFactor: 1.18,
+            accumulatedDust: 0,
+            unlocked: false,
+            unlockRequirement: { buildingId: 'infused-field', level: 20 }
         }
     ]
 };
@@ -131,8 +167,8 @@ function getGlobalMultiplier() {
         multiplier *= boost.multiplier;
     });
 
-    // Burrow Token bonus: +5% per token (balanced for long-term play)
-    const tokenBonus = 1 + (GameState.burrowTokens * 0.05);
+    // Burrow Token bonus: +10% per token (Directive 5.4)
+    const tokenBonus = 1 + (GameState.burrowTokens * 0.10);
     multiplier *= tokenBonus;
 
     return multiplier;
@@ -453,34 +489,64 @@ function renderBuildings() {
         div.className = `building ${building.unlocked ? '' : 'locked'}`;
         div.id = `building-${index}`;
 
-        // Basic HTML structure
+        // Determine Icon
+        let iconSrc = 'rabbit-captain.jpg'; // Default/Placeholder
+        if (building.id === 'rabbit-farm') iconSrc = 'rabbit-farm-icon.png';
+        if (building.id === 'weed-patch') iconSrc = 'weed-patch-icon.png';
+        if (building.id === 'bake-shop') iconSrc = 'bake-shop-icon.png';
+        if (building.id === 'infused-field') iconSrc = 'infused-field-icon.png';
+        if (building.id === 'energy-extractor') iconSrc = 'energy-extractor-icon.png';
+
+        // Rabbit Slot Logic
+        let slotHtml = '';
+        if (building.unlocked) {
+            const assignedId = GameState.assignedRabbits[building.id];
+            const assignedRabbit = assignedId ? GameState.rabbits.find(r => r.id === assignedId) : null;
+            const borderColor = assignedRabbit ? RABBIT_DATA.rarities[assignedRabbit.rarity].color : 'rgba(255,255,255,0.3)';
+            const content = assignedRabbit ? '🐰' : '+';
+
+            slotHtml = `
+            <div class="rabbit-slot" onclick="openRabbitSelector('${building.id}')" title="${assignedRabbit ? 'Change Rabbit' : 'Assign Rabbit'}"
+                 style="position: absolute; top: 10px; right: 10px; width: 65px; height: 65px; 
+                        border: 3px solid ${borderColor}; border-radius: 12px; transform: rotate(5deg);
+                        display: flex; align-items: center; justify-content: center; 
+                        background: ${assignedRabbit ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.4)'}; 
+                        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+                        cursor: pointer; z-index: 10; font-size: 1.5rem; color: #fff; transition: transform 0.2s;">
+                ${content}
+                ${assignedRabbit ? `<div style="position:absolute; top:-8px; right:-8px; background:${borderColor}; color:#000; font-weight:bold; font-size:0.7rem; padding:2px 6px; border-radius:10px;">Lvl ${assignedRabbit.level}</div>` : ''}
+            </div>`;
+        }
+
+        // Structure
         let content = `
+            ${slotHtml}
             <div class="building-icon">
-                <img src="rabbit-captain.jpg" alt="Building Icon" class="rabbit-nft">
+                <img src="${iconSrc}" alt="${building.name}" class="rabbit-nft">
             </div>
             <h2 id="name-${index}">${building.name}</h2>
         `;
 
-        if (building.unlocked) {
-            const assignedRabbitId = GameState.assignedRabbits[building.id];
-            let rabbitDisplay = '';
-            if (assignedRabbitId) {
-                const rabbit = GameState.rabbits.find(r => r.id === assignedRabbitId);
-                if (rabbit) {
-                    const typeData = RABBIT_DATA.types.find(t => t.id === rabbit.typeId);
-                    const rarityData = RABBIT_DATA.rarities[rabbit.rarity];
-                    rabbitDisplay = `<div style="font-size: 0.8rem; color: ${rarityData.color}; margin-bottom: 5px;">🐰 ${typeData.name} (×${rarityData.multiplier.toFixed(2)})</div>`;
-                }
+    if (building.unlocked) {
+        const assignedRabbitId = GameState.assignedRabbits[building.id];
+        let rabbitDisplay = '';
+        if (assignedRabbitId) {
+            const rabbit = GameState.rabbits.find(r => r.id === assignedRabbitId);
+            if (rabbit) {
+                const typeData = RABBIT_DATA.types.find(t => t.id === rabbit.typeId);
+                const rarityData = RABBIT_DATA.rarities[rabbit.rarity];
+                rabbitDisplay = `<div style="font-size: 0.8rem; color: ${rarityData.color}; margin-bottom: 5px;">🐰 ${typeData.name} (×${rarityData.multiplier.toFixed(2)})</div>`;
             }
+        }
 
-            // Milestone info
-            const milestoneMult = getMilestoneMultiplier(building.level);
-            const nextMilestone = getNextMilestone(building.level);
-            const nextMilestoneText = nextMilestone 
-                ? `Next: L${nextMilestone} → ${milestoneMult * 2}x`
-                : 'MAX!';
+        // Milestone info
+        const milestoneMult = getMilestoneMultiplier(building.level);
+        const nextMilestone = getNextMilestone(building.level);
+        const nextMilestoneText = nextMilestone
+            ? `Next: L${nextMilestone} → ${milestoneMult * 2}x`
+            : 'MAX!';
 
-            content += `
+        content += `
                 <div class="building-stats">
                     <div>Level: <span id="level-${index}">${building.level}</span></div>
                     <div>Produces: <span id="prod-${index}">${getProductionRate(building).format()}</span>/sec</div>
@@ -503,24 +569,24 @@ function renderBuildings() {
                     </button>
                 </div>
             `;
-        } else {
-            content += `
+    } else {
+        content += `
                 <div class="locked-stats">🔒 LOCKED</div>
                 <div class="locked-reason">
                     Requires ${building.unlockRequirement.buildingId.replace('-', ' ')} Level ${building.unlockRequirement.level}
                 </div>
             `;
-        }
+    }
 
-        div.innerHTML = content;
-        container.appendChild(div);
+    div.innerHTML = content;
+    container.appendChild(div);
 
-        // Attach event listeners if unlocked
-        if (building.unlocked) {
-            document.getElementById(`btn-collect-${index}`).onclick = () => collectDust(index);
-            document.getElementById(`btn-upgrade-${index}`).onclick = () => upgradeBuilding(index);
-        }
-    });
+    // Attach event listeners if unlocked
+    if (building.unlocked) {
+        document.getElementById(`btn-collect-${index}`).onclick = () => collectDust(index);
+        document.getElementById(`btn-upgrade-${index}`).onclick = () => upgradeBuilding(index);
+    }
+});
 }
 
 function updateUI() {
@@ -1127,35 +1193,96 @@ function hideCrateResult() {
 // Assignment Logic
 let selectedRabbitId = null;
 
-function openAssignMenu(rabbitId) {
-    selectedRabbitId = rabbitId;
+function openRabbitSelector(buildingId) {
     const container = document.getElementById('assign-building-list');
     container.innerHTML = '';
 
-    // Show unlocked buildings
-    GameState.buildings.forEach((building, index) => {
-        if (!building.unlocked) return;
+    // Header
+    const header = document.createElement('h3');
+    header.textContent = `Assign to ${GameState.buildings.find(b => b.id === buildingId).name}`;
+    header.style.color = 'var(--accent-gold)';
+    container.appendChild(header);
 
-        const currentRabbit = GameState.assignedRabbits[building.id];
-        const hasRabbit = currentRabbit && currentRabbit !== rabbitId;
+    // List Rabbits
+    // Sort by multiplier (rarity) desc
+    const sortedRabbits = [...GameState.rabbits].sort((a, b) => {
+        return RABBIT_DATA.rarities[b.rarity].multiplier - RABBIT_DATA.rarities[a.rarity].multiplier;
+    });
+
+    sortedRabbits.forEach(rabbit => {
+        // Check if assigned elsewhere
+        let assignedTo = null;
+        for (const [bId, rId] of Object.entries(GameState.assignedRabbits)) {
+            if (rId === rabbit.id) assignedTo = bId;
+        }
 
         const btn = document.createElement('button');
         btn.className = 'game-btn';
-        btn.style.cssText = 'width: 100%; margin: 5px 0; padding: 10px;';
-        btn.innerHTML = `${building.name} ${hasRabbit ? '(has rabbit)' : ''}`;
-        btn.onclick = () => assignRabbit(rabbitId, building.id);
+        btn.style.cssText = 'width: 100%; margin: 5px 0; padding: 10px; display: flex; justify-content: space-between;';
+
+        const rarityData = RABBIT_DATA.rarities[rabbit.rarity];
+        const mult = rarityData.multiplier;
+
+        // Visuals
+        const assignedText = assignedTo ? (assignedTo === buildingId ? '(Current)' : `(at ${GameState.buildings.find(b => b.id === assignedTo).name})`) : 'Available';
+        const color = assignedTo ? '#7f8c8d' : rarityData.color; // Grey if busy
+
+        btn.innerHTML = `
+            <span>${rarityData.name} Rabbit (${mult}x)</span>
+            <span style="font-size:0.8em; color:${assignedTo ? '#aaa' : '#fff'}">${assignedText}</span>
+        `;
+
+        if (assignedTo === buildingId) {
+            btn.onclick = () => unassignRabbitFromBuilding(buildingId);
+            btn.innerHTML = `<span>Unassign Rabbit</span>`;
+            btn.style.background = '#c0392b';
+        } else if (assignedTo) {
+            btn.disabled = true; // Simplified: Must unassign first
+            btn.style.opacity = '0.5';
+        } else {
+            btn.onclick = () => assignRabbitToBuilding(rabbit.id, buildingId);
+            btn.style.borderColor = color;
+        }
+
         container.appendChild(btn);
     });
 
-    // Unassign option
-    const unassignBtn = document.createElement('button');
-    unassignBtn.className = 'game-btn';
-    unassignBtn.style.cssText = 'width: 100%; margin: 5px 0; padding: 10px; background: #666;';
-    unassignBtn.textContent = 'Unassign';
-    unassignBtn.onclick = () => unassignRabbit(rabbitId);
-    container.appendChild(unassignBtn);
+    if (sortedRabbits.length === 0) {
+        container.innerHTML += '<p>No rabbits found!</p>';
+    }
+
+    // Add "Unassign Current" if any
+    if (GameState.assignedRabbits[buildingId]) {
+        const unassignBtn = document.createElement('button');
+        unassignBtn.className = 'game-btn';
+        unassignBtn.textContent = 'Clear Slot';
+        unassignBtn.style.background = '#7f8c8d';
+        unassignBtn.onclick = () => unassignRabbitFromBuilding(buildingId);
+        container.appendChild(unassignBtn);
+    }
 
     document.getElementById('assign-modal').classList.remove('hidden');
+}
+
+function assignRabbitToBuilding(rabbitId, buildingId) {
+    GameState.assignedRabbits[buildingId] = rabbitId;
+    updateUI();
+    saveGame();
+    document.getElementById('assign-modal').classList.add('hidden');
+}
+
+function unassignRabbitFromBuilding(buildingId) {
+    delete GameState.assignedRabbits[buildingId];
+    updateUI();
+    saveGame();
+    document.getElementById('assign-modal').classList.add('hidden');
+}
+
+// Deprecated old function (keep for compatibility if needed, but new one replaces it)
+function openAssignMenu(rabbitId) {
+    // Redirect to building selector? Or just disable "Assign" button in Rabbit Manager?
+    // for now, let's just log
+    console.log("Legacy assign menu called");
 }
 
 function hideAssignMenu() {

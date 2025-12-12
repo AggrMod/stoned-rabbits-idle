@@ -1,4 +1,5 @@
 /* Stoned Rabbits: Idle Empire - Web MVP */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
 
 * {
     margin: 0;
@@ -7,20 +8,33 @@
 }
 
 :root {
-    --bg-dark: #1a1a2e;
-    --bg-card: #16213e;
-    --bg-button: #0f3460;
-    --accent-gold: #f4d03f;
-    --accent-green: #27ae60;
+    /* Vibrant Theme Palette */
+    --bg-dark: #202c39;
+    /* Deep Blue-Black */
+    --bg-card: #283648;
+    /* Lighter Blue-Grey */
+    --bg-button: #345c85;
+    /* Soft Blue */
+
+    --accent-gold: #ffcb05;
+    /* Bright Cartoon Gold */
+    --accent-green: #2ecc71;
+    /* Emerald Green */
     --accent-purple: #9b59b6;
+    /* Amethyst */
+    --accent-orange: #e67e22;
+    /* Carrot Orange */
+
     --text-primary: #ffffff;
-    --text-secondary: #b0b0b0;
+    --text-secondary: #dce1e6;
     --dust-color: #f39c12;
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, var(--bg-dark) 0%, #0f0f23 100%);
+    font-family: 'Outfit', 'Segoe UI', sans-serif;
+    /* Try a modern font if available */
+    background: linear-gradient(180deg, #4ECDC4 0%, #44A08D 50%, #2E8B57 100%);
+    /* Teal to forest green - vibrant like mockups */
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
@@ -307,11 +321,34 @@ body {
 
 .building {
     background: var(--bg-card);
-    border-radius: 15px;
-    padding: 20px;
+    border-radius: 20px;
+    padding: 15px;
     text-align: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 8px 0 rgba(0, 0, 0, 0.2);
+    /* Chunky shadow */
+    transition: transform 0.1s, margin-top 0.1s;
+    border: 2px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.building:hover {
+    transform: translateY(-4px);
+    margin-bottom: 4px;
+    /* Offset margin to prevent layout jump? No, simplify */
+    /* Just standard transform */
+}
+
+/* Glass shine effect */
+.building::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+    pointer-events: none;
 }
 
 .building:hover {

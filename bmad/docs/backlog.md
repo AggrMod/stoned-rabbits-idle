@@ -1,180 +1,256 @@
 # Stoned Rabbits: Idle Empire - Product Backlog
 
-## Epic 1: Core Production System
-
-### Stories
-
-- [ ] **CORE-001**: As a player, I can see Magic Dust accumulating in real-time so I feel progress
-- [ ] **CORE-002**: As a player, I can tap buildings to collect accumulated Magic Dust
-- [ ] **CORE-003**: As a player, I can upgrade buildings to increase production
-- [ ] **CORE-004**: As a player, I can see my total Magic Dust and production rate
-- [ ] **CORE-005**: As a player, I return to the game and receive offline earnings
-
-### Technical Tasks
-
-- [ ] Implement BigNumber library for exponential values
-- [ ] Create Building base class with production logic
-- [ ] Implement save/load system with encryption
-- [ ] Create UI for main farm screen
+## Status Legend
+- [x] Complete
+- [~] In Progress
+- [ ] Not Started
 
 ---
 
-## Epic 2: Rabbit System
+## Epic 1: Core Production System ✅ COMPLETE
 
 ### Stories
 
-- [ ] **RABBIT-001**: As a player, I can view my rabbit collection
-- [ ] **RABBIT-002**: As a player, I can open crates to get new rabbits
-- [ ] **RABBIT-003**: As a player, I can see rabbit rarity and stats
-- [ ] **RABBIT-004**: As a player, I can assign rabbits to buildings to boost production
-- [ ] **RABBIT-005**: As a player, I can evolve rabbits using shards
-- [ ] **RABBIT-006**: As a player, duplicate rabbits give me shards
+- [x] **CORE-001**: As a player, I can see Magic Dust accumulating in real-time so I feel progress
+- [x] **CORE-002**: As a player, I can tap buildings to collect accumulated Magic Dust
+- [x] **CORE-003**: As a player, I can upgrade buildings to increase production
+- [x] **CORE-004**: As a player, I can see my total Magic Dust and production rate
+- [x] **CORE-005**: As a player, I return to the game and receive offline earnings
 
 ### Technical Tasks
 
-- [ ] Create Rabbit ScriptableObject data structure
-- [ ] Implement crate opening with weighted rarity
-- [ ] Create assignment manager for building-rabbit linking
-- [ ] Build rabbit collection UI grid
+- [x] Implement BigNumber library for exponential values
+- [x] Create Building base class with production logic
+- [x] Implement save/load system (localStorage)
+- [x] Create UI for main farm screen
+- [x] Milestone bonus system (2x at 10/25/50/100/200/400)
+- [x] Cost formula: baseCost × 1.07^level
+- [x] Production formula: baseProduction × 1.15^level
 
 ---
 
-## Epic 3: Mini-Games Part A
+## Epic 2: Rabbit System ✅ COMPLETE
 
 ### Stories
 
-- [ ] **WHEEL-001**: As a player, I can spin the wheel for free every 4 hours
-- [ ] **WHEEL-002**: As a player, I can use Spin Tickets for extra spins
-- [ ] **WHEEL-003**: As a player, I can watch an ad for a free spin
-- [ ] **WHEEL-004**: As a player, I can win various rewards from the wheel
-- [ ] **FLIP-001**: As a player, I can flip a coin for a 50/50 chance at a boost
-- [ ] **FLIP-002**: As a player, losing the flip puts it on cooldown
+- [x] **RABBIT-001**: As a player, I can view my rabbit collection
+- [x] **RABBIT-002**: As a player, I can open crates to get new rabbits
+- [x] **RABBIT-003**: As a player, I can see rabbit rarity and stats
+- [x] **RABBIT-004**: As a player, rabbits provide global production multiplier
+- [ ] **RABBIT-005**: As a player, I can evolve rabbits using shards (DEFERRED)
+- [ ] **RABBIT-006**: As a player, duplicate rabbits give me shards (DEFERRED)
 
 ### Technical Tasks
 
-- [ ] Create wheel spin animation and logic
-- [ ] Implement reward distribution system
-- [ ] Create cooldown timer system
-- [ ] Build mini-games hub UI
+- [x] Create Rabbit data structure with rarity/multiplier
+- [x] Implement crate opening with weighted rarity
+- [x] Build rabbit collection UI grid
+- [ ] Assignment manager for building-rabbit linking (Epic 6)
 
 ---
 
-## Epic 4: Mini-Games Part B
+## Epic 3: Mini-Games Part A ✅ COMPLETE
 
 ### Stories
 
-- [ ] **RUMBLE-001**: As a player, I can select 3 rabbits for battle
-- [ ] **RUMBLE-002**: As a player, I can watch auto-battles play out
-- [ ] **RUMBLE-003**: As a player, I earn rewards for winning battles
-- [ ] **RUMBLE-004**: As a player, I don't lose anything when I lose
-- [ ] **EXPEDITION-001**: As a player, I can send rabbits on 1-12 hour expeditions
-- [ ] **EXPEDITION-002**: As a player, I can collect expedition rewards when complete
-- [ ] **EXPEDITION-003**: As a player, Expedition-talent rabbits give better rewards
+- [x] **WHEEL-001**: As a player, I can spin the wheel for free every 4 hours
+- [x] **WHEEL-002**: As a player, wheel gives various rewards
+- [x] **FLIP-001**: As a player, I can flip a coin for a 50/50 chance at a boost
+- [x] **FLIP-002**: As a player, losing the flip puts it on cooldown
 
 ### Technical Tasks
 
-- [ ] Create battle simulation system
-- [ ] Implement battle animation/visualization
-- [ ] Create expedition timer and reward calculation
-- [ ] Build expedition UI with slot management
+- [x] Create wheel spin animation and logic
+- [x] Implement reward distribution system
+- [x] Create cooldown timer system
+- [x] Build mini-games hub UI
 
 ---
 
-## Epic 5: Prestige System
+## Epic 4: Mini-Games Part B (DEFERRED)
+
+*Rumble Battles and Expeditions deferred to post-launch*
+
+---
+
+## Epic 5: Prestige System ✅ COMPLETE
 
 ### Stories
 
-- [ ] **PRESTIGE-001**: As a player, I can see when prestige is available (1e10 dust)
-- [ ] **PRESTIGE-002**: As a player, I can preview my Burrow Token gain
-- [ ] **PRESTIGE-003**: As a player, I can "Ascend the Burrow" to prestige
-- [ ] **PRESTIGE-004**: As a player, I keep my tokens, gems, and cosmetics after prestige
-- [ ] **TALENT-001**: As a player, I can spend Burrow Tokens on talent upgrades
-- [ ] **TALENT-002**: As a player, talents provide permanent production bonuses
+- [x] **PRESTIGE-001**: As a player, I can see when prestige is available (1e10 dust)
+- [x] **PRESTIGE-002**: As a player, I can preview my Burrow Token gain
+- [x] **PRESTIGE-003**: As a player, I can "Ascend the Burrow" to prestige
+- [x] **PRESTIGE-004**: As a player, tokens provide 5% production bonus each
+- [x] **PRESTIGE-005**: As a player, I can reset ascend progress if needed
 
 ### Technical Tasks
 
-- [ ] Implement prestige trigger and reset logic
-- [ ] Create Burrow Token calculation
-- [ ] Build talent tree data structure
-- [ ] Create prestige confirmation UI
+- [x] Implement prestige trigger and reset logic
+- [x] Create Burrow Token calculation (log10 based)
+- [x] Token multiplier: 1 + (tokens × 0.05)
+- [x] Create prestige confirmation UI with reset option
 
 ---
 
-## Epic 6: Integration
+## Epic 6: Multi-Building & Rabbit Assignment 🆕
+
+### Overview
+Expand from 1 building to 4 buildings, allow rabbit assignment per building.
+
+### 🎨 Art Requirements: 4 IMAGES
+1. Stoned Farm building illustration
+2. Bake Shop building illustration
+3. Weed Patch building illustration
+4. Infused Field building illustration
 
 ### Stories
 
-- [ ] **ADS-001**: As a player, I can watch rewarded ads for bonuses
-- [ ] **ADS-002**: As a player, I see non-intrusive interstitial ads
-- [ ] **IAP-001**: As a player, I can purchase gem packs
-- [ ] **IAP-002**: As a player, I can buy rabbit bundles
-- [ ] **TUTORIAL-001**: As a new player, I'm guided through basic mechanics
+- [ ] **BUILD-001**: Add 4 building types with different costs/production
+- [ ] **BUILD-002**: Buildings unlock at specific prestige levels
+- [ ] **BUILD-003**: Each building has its own upgrade path
+- [ ] **ASSIGN-001**: Assign rabbits to specific buildings
+- [ ] **ASSIGN-002**: Rabbit multiplier only applies to assigned building
+- [ ] **ASSIGN-003**: Visual indicator shows which rabbit is assigned where
 
 ### Technical Tasks
 
-- [ ] Integrate Unity Ads SDK
-- [ ] Implement Google Play Billing
-- [ ] Create tutorial sequence
-- [ ] Build shop UI
+- [ ] Create building config with 4 types
+- [ ] Implement unlock system (prestige milestones)
+- [ ] Add rabbit-to-building assignment logic
+- [ ] Update UI to show multiple buildings
+- [ ] Individual production displays per building
+
+### Building Data
+| Building | Unlock | Base Cost | Base Production |
+|----------|--------|-----------|-----------------|
+| Stoned Farm | Start | 50 | 1/sec |
+| Bake Shop | Prestige 1 | 500 | 8/sec |
+| Weed Patch | Prestige 3 | 5000 | 50/sec |
+| Infused Field | Prestige 5 | 50000 | 300/sec |
 
 ---
 
-## Epic 7: Polish
+## Epic 7: Visual Polish 🆕
+
+### Overview
+CSS-first approach - minimal images, max visual impact.
+
+### 🎨 Art Requirements: 6-8 IMAGES
+1. Game logo/title
+2. Background scene (farm with sky)
+3. 5 rabbit base illustrations (Bandit, Viking, Tricky, Captain, etc.)
+
+*Trait icons use emoji/CSS - no images needed*
 
 ### Stories
 
-- [ ] **ANALYTICS-001**: Track player retention metrics
-- [ ] **ANALYTICS-002**: Track monetization events
-- [ ] **CLOUD-001**: As a player, my progress saves to the cloud
-- [ ] **BETA-001**: Conduct closed beta testing
-- [ ] **BALANCE-001**: Balance economy based on beta feedback
+- [ ] **VISUAL-001**: Vibrant color scheme (green/orange/blue)
+- [ ] **VISUAL-002**: Card-based UI for buildings and rabbits
+- [ ] **VISUAL-003**: Animated background with CSS gradients
+- [ ] **VISUAL-004**: Tab navigation (Farm/Rabbits/Games/Prestige)
+- [ ] **VISUAL-005**: Rabbit cards show rarity border colors
 
 ### Technical Tasks
 
-- [ ] Integrate Firebase Analytics
-- [ ] Implement Google Play Games Services save
-- [ ] Set up beta testing track
-- [ ] Create analytics dashboard
+- [ ] Create CSS color palette matching mockups
+- [ ] Build card component system
+- [ ] Implement tab navigation
+- [ ] Add CSS animations for production/collect
+- [ ] Gradient backgrounds (no image needed)
+- [ ] Rarity glow effects (CSS only)
+
+### CSS-First Approach
+| Element | Approach |
+|---------|----------|
+| Background | CSS gradient (green to blue) |
+| Building cards | CSS with 1 illustration each |
+| Rabbit cards | CSS border + 1 illustration |
+| Buttons | CSS gradients, no images |
+| Icons | Emoji or CSS shapes |
+| Trait icons | Emoji (🎩👓🚬🌿) |
+| Particles | CSS animations |
 
 ---
 
-## Epic 8: Launch
+## Epic 8: Shop & Gems 🆕
+
+### Overview
+Add premium currency and shop system.
+
+### 🎨 Art Requirements: 2 IMAGES
+1. Gem icon
+2. Crate/chest illustration
 
 ### Stories
 
-- [ ] **STORE-001**: Create Play Store listing assets
-- [ ] **STORE-002**: Write compelling store description
-- [ ] **LAUNCH-001**: Submit for review
-- [ ] **LAUNCH-002**: Prepare day-1 patch if needed
+- [ ] **SHOP-001**: Gems as premium currency
+- [ ] **SHOP-002**: Can buy crates with gems
+- [ ] **SHOP-003**: Can buy boosts with gems
+- [ ] **SHOP-004**: Gem display in header
 
 ### Technical Tasks
 
-- [ ] Create screenshots and feature graphics
-- [ ] Record promo video
-- [ ] Set up crash reporting
-- [ ] Prepare release notes
+- [ ] Add gems to GameState
+- [ ] Create shop UI modal
+- [ ] Implement gem purchases for crates/boosts
+- [ ] Save gems with game state
 
 ---
 
-## Priority Order
+## Epic 9: Launch Prep
 
-1. **Must Have (MVP)**
-   - Core Production (Epic 1)
-   - Rabbit Collection (basic from Epic 2)
-   - Prestige System (Epic 5)
-   - One Mini-Game (Spin the Wheel)
+### Stories
 
-2. **Should Have**
-   - Full Rabbit System (Epic 2)
-   - All Mini-Games (Epics 3-4)
-   - Monetization (Epic 6)
+- [ ] **LAUNCH-001**: Firebase Hosting deployment
+- [ ] **LAUNCH-002**: Analytics integration
+- [ ] **LAUNCH-003**: Performance optimization
 
-3. **Could Have**
-   - Tutorial
+### Technical Tasks
+
+- [ ] Minify/bundle JS
+- [ ] Optimize images (WebP)
+- [ ] Add loading screen
+- [ ] Test on mobile browsers
+
+---
+
+## 🎨 Art Asset Summary
+
+### Total Images Needed: ~12-15
+
+| Epic | Images | Description |
+|------|--------|-------------|
+| 6 | 4 | Building illustrations |
+| 7 | 6-8 | Logo + background + 5 rabbits |
+| 8 | 2 | Gem + crate icons |
+
+### CSS Handles (No Images Needed)
+- Backgrounds (gradients)
+- Buttons (gradients)
+- Card borders/glows
+- Trait icons (emoji)
+- Animations
+- Rarity colors
+
+---
+
+## Priority Order (Updated)
+
+1. **Done (MVP Logic)**
+   - Core Production (Epic 1) ✅
+   - Rabbit Collection (Epic 2) ✅
+   - Mini-Games (Epic 3) ✅
+   - Prestige System (Epic 5) ✅
+
+2. **Next Up**
+   - Multi-Building (Epic 6) - 4 images needed
+   - Visual Polish (Epic 7) - 6-8 images needed
+
+3. **After Visual**
+   - Shop/Gems (Epic 8) - 2 images needed
+   - Launch (Epic 9)
+
+4. **Post-Launch**
+   - Rumble Battles (Epic 4)
+   - Expeditions
    - Cloud Save
-   - Analytics
-
-4. **Won't Have (MVP)**
-   - Leaderboards
-   - Social features
-   - NFT integration
