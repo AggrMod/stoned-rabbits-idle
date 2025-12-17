@@ -5,6 +5,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Stoned Rabbits: Idle Empire</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Build your Magic Dust empire with cute stoned rabbits! An idle/incremental game featuring NFT integration with the Stonned Rabitts collection.">
+    <meta name="keywords" content="idle game, incremental game, stoned rabbits, NFT game, magic dust, web game">
+    <meta name="author" content="Stoned Rabbits Team">
+
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://stoned-rabbits-game.web.app/">
+    <meta property="og:title" content="Stoned Rabbits: Idle Empire">
+    <meta property="og:description" content="Build your Magic Dust empire with cute stoned rabbits! An idle/incremental game featuring NFT integration.">
+    <meta property="og:image" content="https://stoned-rabbits-game.web.app/rabbit-captain.jpg">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Stoned Rabbits: Idle Empire">
+    <meta name="twitter:description" content="Build your Magic Dust empire with cute stoned rabbits!">
+    <meta name="twitter:image" content="https://stoned-rabbits-game.web.app/rabbit-captain.jpg">
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#f1c40f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Stoned Rabbits">
+    <link rel="apple-touch-icon" href="rabbit-captain.jpg">
+    <link rel="manifest" href="manifest.json">
+
     <link rel="stylesheet" href="styles.css">
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐰</text></svg>">
@@ -16,11 +43,9 @@
         <header id="header">
             <div class="hero-banner"
                 style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 5px;">
-                <img src="rabbit-viking.jpg" class="hero-rabbit side-rabbit"
-                    style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--accent-gold); object-fit: cover; transform: rotate(-10deg);">
                 <div class="hero-center" style="display: flex; flex-direction: column; align-items: center;">
-                    <img src="rabbit-captain.jpg" class="hero-rabbit main-rabbit"
-                        style="width: 90px; height: 90px; border-radius: 50%; border: 4px solid var(--accent-gold); object-fit: cover; box-shadow: 0 0 15px rgba(255, 203, 5, 0.5); z-index: 2;">
+                    <img src="rabbit-captain.jpg" class="hero-rabbit main-rabbit nft-brand"
+                        style="width: 110px; height: 110px; border-radius: 50%; border: 4px solid var(--accent-gold); object-fit: cover; box-shadow: 0 0 25px rgba(255, 203, 5, 0.7), 0 0 50px rgba(139, 69, 19, 0.4); z-index: 2;">
                     <div class="hero-title" style="margin-top: -15px; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">
                         <h1
                             style="margin: 0; line-height: 1; font-size: 1.6rem; text-transform: uppercase; letter-spacing: 1px; color: #fff;">
@@ -30,8 +55,6 @@
                             Idle Empire</h2>
                     </div>
                 </div>
-                <img src="rabbit-masked.jpg" class="hero-rabbit side-rabbit"
-                    style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--accent-gold); object-fit: cover; transform: rotate(10deg);">
             </div>
             <div id="currency-display">
                 <div id="dust-amount">Magic Dust: <span id="dust-value">0</span></div>
@@ -39,7 +62,23 @@
                 <div id="boost-display" class="hidden">🔥 <span id="boost-text">2x Boost</span> (<span
                         id="boost-timer">00:00</span>)</div>
             </div>
+            <!-- Tier 2 Currencies (shown when unlocked) -->
+            <div id="tier2-currencies" class="hidden">
+                <span class="tier2-currency">💎 <span id="gems-display">0</span></span>
+                <span class="tier2-currency">📚 <span id="rabbit-xp-display">0</span> XP</span>
+                <span class="tier2-currency">🌿 <span id="ingredients-count">0</span></span>
+            </div>
+            <!-- Tier 3 Currencies (shown when unlocked) -->
+            <div id="tier3-currencies" class="hidden">
+                <span class="tier3-currency">🌍 <span id="worlds-display">0</span> Worlds</span>
+                <span class="tier3-currency">⭐ <span id="legendary-rabbits-display">0</span> Legendary</span>
+                <span class="tier3-currency">🏦 <span id="staked-tokens-display">0</span> Staked</span>
+                <span class="tier3-currency">∞ <span id="infinity-display">0.00</span></span>
+            </div>
         </header>
+
+        <!-- Notification Container -->
+        <div id="notification-container"></div>
 
         <!-- Mini-Games Cards (visible on main page) -->
         <div id="minigames-row">
@@ -65,6 +104,30 @@
                 <div id="flip-result" class="game-result hidden"></div>
                 <button id="play-coin-btn" class="game-btn upgrade-btn mini-btn">Flip!</button>
                 <div class="icon-timer" id="flip-icon-timer"></div>
+            </div>
+
+            <!-- Rumble Battle Card -->
+            <div class="minigame-card-main" id="rumble-card">
+                <div class="card-header">
+                    <span style="font-size: 2rem;">⚔️</span>
+                    <span class="ready-dot hidden" id="rumble-ready-dot"></span>
+                </div>
+                <h3>Rumble</h3>
+                <div id="rumble-result" class="game-result hidden"></div>
+                <button id="rumble-btn" class="game-btn upgrade-btn mini-btn">Fight!</button>
+                <div class="icon-timer" id="rumble-icon-timer"></div>
+            </div>
+
+            <!-- Expedition Card -->
+            <div class="minigame-card-main" id="expedition-card">
+                <div class="card-header">
+                    <span style="font-size: 2rem;">🗺️</span>
+                    <span class="ready-dot hidden" id="expedition-ready-dot"></span>
+                </div>
+                <h3>Expedition</h3>
+                <div id="expedition-result" class="game-result hidden"></div>
+                <button id="expedition-btn" class="game-btn upgrade-btn mini-btn">Send!</button>
+                <div class="icon-timer" id="expedition-icon-timer"></div>
             </div>
         </div>
 
@@ -202,6 +265,19 @@
                 </div>
 
                 <hr style="border-color: #333; margin: 20px 0 15px 0;">
+
+                <!-- Talent Tree Section -->
+                <div style="margin-bottom: 20px;">
+                    <h3 style="color: var(--accent-gold); text-align: center; margin-bottom: 10px;">🌿 Talent Tree</h3>
+                    <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+                        <span style="color: #2ecc71;">Available Tokens: <span id="available-tokens" style="font-weight: bold;">0</span></span>
+                    </div>
+                    <div id="talent-tree-container" style="max-height: 300px; overflow-y: auto;">
+                        <!-- Talents rendered by JS -->
+                    </div>
+                </div>
+
+                <hr style="border-color: #333; margin: 20px 0 15px 0;">
                 <button id="reset-ascend-btn" class="reset-btn" style="width: 100%;">Reset Ascend Progress</button>
             </div>
         </div>
@@ -212,7 +288,8 @@
             style="position: fixed; bottom: 0; left: 0; width: 100%; background: var(--bg-card); border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; box-shadow: 0 -5px 20px rgba(0,0,0,0.5);">
             <button class="nav-tab" onclick="window.scrollTo({top:0, behavior:'smooth'})"
                 style="background:none; border:none; color: var(--accent-gold); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;">
-                <span style="font-size: 1.5rem;">🏰</span>
+                <img src="rabbit-boss.png"
+                    style="width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--accent-gold); object-fit: cover; margin-bottom: 2px;">
                 <span style="font-size: 0.7rem; font-weight: bold;">Empire</span>
             </button>
             <button class="nav-tab" onclick="document.getElementById('rabbits-btn').click()"
@@ -242,17 +319,69 @@
                 <button id="prestige-btn"></button>
             </div>
 
+            <!-- Cloud Save UI -->
+            <div id="cloud-save-bar" style="margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <span id="cloud-status" title="Cloud Save Status" style="font-size: 1.2rem;">☁️</span>
+                    <span id="cloud-user" style="color: #888; font-size: 0.85rem;">Not signed in</span>
+                    <button id="cloud-signin-btn" onclick="cloudSignIn()" class="game-btn" style="padding: 5px 12px; font-size: 0.75rem; background: #4285f4;">Sign In</button>
+                    <button id="cloud-signout-btn" onclick="cloudSignOut()" class="game-btn hidden" style="padding: 5px 12px; font-size: 0.75rem; background: #666;">Sign Out</button>
+                    <button id="cloud-sync-btn" onclick="uploadSave()" class="game-btn hidden" style="padding: 5px 12px; font-size: 0.75rem; background: #2ecc71;">Sync</button>
+                </div>
+            </div>
+
             <div id="stats" style="margin-bottom: 10px;">
                 <span>Total: <span id="total-earned">0</span></span> |
                 <span>Prestiges: <span id="prestige-count">0</span></span>
             </div>
 
             <button id="reset-btn" class="reset-btn" style="padding: 5px 10px; font-size: 0.7rem;">Hard Reset</button>
-            <div id="version">v0.2.1 - Vibrant UI</div>
+            <div id="version">v1.0.0 - Launch Release</div>
         </footer>
     </div>
 
+    <!-- NFT Crate Modal -->
+    <div id="crate-modal" class="modal hidden">
+        <div class="modal-content crate-modal-content">
+            <div class="crate-box">
+                <div class="crate-lid"></div>
+                <div class="crate-body"></div>
+            </div>
+            <div id="crate-result"></div>
+        </div>
+    </div>
+
+    <!-- Cloud Save Conflict Modal -->
+    <div id="cloud-conflict-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 350px;">
+            <h2 style="color: var(--accent-gold);">Cloud Save Found!</h2>
+            <p style="color: #aaa; margin-bottom: 15px;">Which save would you like to use?</p>
+
+            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                <div style="flex: 1; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; text-align: center;">
+                    <div style="font-size: 1.5rem;">☁️</div>
+                    <div style="font-weight: bold; color: #3498db;">Cloud Save</div>
+                    <div style="font-size: 0.8rem; color: #888;" id="cloud-save-time">--</div>
+                    <div style="font-size: 1.2rem; color: var(--accent-gold);" id="cloud-save-dust">0</div>
+                </div>
+                <div style="flex: 1; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; text-align: center;">
+                    <div style="font-size: 1.5rem;">📱</div>
+                    <div style="font-weight: bold; color: #2ecc71;">Local Save</div>
+                    <div style="font-size: 0.8rem; color: #888;" id="local-save-time">--</div>
+                    <div style="font-size: 1.2rem; color: var(--accent-gold);" id="local-save-dust">0</div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button onclick="useCloudSave()" class="game-btn" style="flex: 1; background: #3498db;">Use Cloud</button>
+                <button onclick="useLocalSave()" class="game-btn" style="flex: 1; background: #2ecc71;">Use Local</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="nft-api.js"></script>
     <script src="game.js"></script>
+    <script src="cloud-save.js"></script>
 </body>
 
 </html>

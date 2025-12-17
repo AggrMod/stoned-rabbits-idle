@@ -42,3 +42,4 @@ firebase-debug.log
 # Logs
 *.log
 npm-debug.log*
+web-app/public/nul
