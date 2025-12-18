@@ -83,6 +83,15 @@ const GameState = {
     lifetimeDust: new BigNumber(0), // Never resets, used for prestige calc
     burrowTokens: 0,                // Permanent currency
     prestigeCount: 0,
+    gems: 100,                      // Premium currency
+    noAdsUntil: 0,                  // Timestamp when no-ads expires
+    purchaseHistory: [],            // Track IAP purchases
+    settings: {                     // User settings
+        sfxVolume: 0.5,            // 0-1
+        musicVolume: 0.3,          // 0-1
+        particlesEnabled: true,
+        soundEnabled: true
+    },
     lastSaveTime: Date.now(),
     lastSpinTime: 0, // Timestamp of last spin
     lastFlipTime: 0, // Timestamp of last coin flip
@@ -153,6 +162,85 @@ const GameState = {
         }
     ]
 };
+
+// ============================================
+// AUDIO MANAGER
+// ============================================
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new AudioContext();
+    }
+}
+
+function playSound(type) {
+    if (!GameState.settings.soundEnabled || !audioCtx) return;
+
+    const volume = GameState.settings.sfxVolume;
+    if (volume === 0) return;
+
+    const now = audioCtx.currentTime;
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    // Different sounds for different actions
+    switch (type) {
+        case 'collect':
+            // Ascending chime
+            oscillator.frequency.setValueAtTime(523.25, now); // C5
+            oscillator.frequency.exponentialRampToValueAtTime(1046.5, now + 0.1); // C6
+            gainNode.gain.setValueAtTime(volume * 0.3, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            oscillator.start(now);
+            oscillator.stop(now + 0.2);
+            break;
+
+        case 'upgrade':
+            // Power-up sound
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(200, now);
+            oscillator.frequency.exponentialRampToValueAtTime(800, now + 0.15);
+            gainNode.gain.setValueAtTime(volume * 0.2, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            oscillator.start(now);
+            oscillator.stop(now + 0.3);
+            break;
+
+        case 'purchase':
+            // Cash register
+            oscillator.frequency.setValueAtTime(800, now);
+            oscillator.frequency.setValueAtTime(600, now + 0.05);
+            gainNode.gain.setValueAtTime(volume * 0.25, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            oscillator.start(now);
+            oscillator.stop(now + 0.15);
+            break;
+
+        case 'click':
+            // Soft click
+            oscillator.frequency.setValueAtTime(1000, now);
+            gainNode.gain.setValueAtTime(volume * 0.15, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+            oscillator.start(now);
+            oscillator.stop(now + 0.05);
+            break;
+
+        case 'error':
+            // Buzz
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(150, now);
+            gainNode.gain.setValueAtTime(volume * 0.2, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            oscillator.start(now);
+            oscillator.stop(now + 0.2);
+            break;
+    }
+}
 
 // ============================================
 // GAME CALCULATIONS
@@ -242,9 +330,24 @@ function collectDust(buildingIndex) {
     GameState.lifetimeDust = GameState.lifetimeDust.add(amount);
     building.accumulatedDust = 0;
 
+    // Play collect sound
+    playSound('collect');
+
     // Visual feedback
-    spawnDustParticle();
-    showNumberPop('+' + new BigNumber(amount).format());
+    showNumberPop(`+${new BigNumber(amount).format()} Dust`, '#ffcb05');
+
+    // Spawn collect particles
+    const buildingEl = document.querySelector(`.building-spatial[data-building-index="${index}"]`);
+    if (buildingEl) {
+        const rect = buildingEl.getBoundingClientRect();
+        const scene = document.getElementById('grassland-scene');
+        if (scene) {
+            const sceneRect = scene.getBoundingClientRect();
+            const x = `${rect.left - sceneRect.left + rect.width / 2}px`;
+            const y = `${rect.top - sceneRect.top + rect.height / 2}px`;
+            spawnCollectParticles(x, y);
+        }
+    }
 
     updateUI();
     saveGame();
@@ -260,6 +363,15 @@ function upgradeBuilding(buildingIndex) {
     GameState.magicDust = GameState.magicDust.subtract(cost);
     building.level++;
 
+    // Play upgrade sound
+    playSound('upgrade');
+
+    // Spawn upgrade particles
+    const buildingEl = document.querySelector(`.building-spatial[data-building-index="${index}"]`);
+    if (buildingEl) {
+        spawnUpgradeEffect(buildingEl);
+    }
+
     // Check for milestone celebration
     if (MILESTONES.includes(building.level)) {
         const mult = getMilestoneMultiplier(building.level);
@@ -271,6 +383,7 @@ function upgradeBuilding(buildingIndex) {
     }
 
     updateUI();
+    checkBuildingUnlocks();
     saveGame();
 }
 
@@ -482,6 +595,11 @@ function checkUnlocks() {
 
 function renderBuildings() {
     const container = document.getElementById('building-area');
+    if (!container) {
+        // New HTML doesn't have building-area, use compact renderer instead
+        console.log('📦 Old building-area not found, skipping legacy render');
+        return;
+    }
     container.innerHTML = '';
 
     GameState.buildings.forEach((building, index) => {
@@ -527,26 +645,26 @@ function renderBuildings() {
             <h2 id="name-${index}">${building.name}</h2>
         `;
 
-    if (building.unlocked) {
-        const assignedRabbitId = GameState.assignedRabbits[building.id];
-        let rabbitDisplay = '';
-        if (assignedRabbitId) {
-            const rabbit = GameState.rabbits.find(r => r.id === assignedRabbitId);
-            if (rabbit) {
-                const typeData = RABBIT_DATA.types.find(t => t.id === rabbit.typeId);
-                const rarityData = RABBIT_DATA.rarities[rabbit.rarity];
-                rabbitDisplay = `<div style="font-size: 0.8rem; color: ${rarityData.color}; margin-bottom: 5px;">🐰 ${typeData.name} (×${rarityData.multiplier.toFixed(2)})</div>`;
+        if (building.unlocked) {
+            const assignedRabbitId = GameState.assignedRabbits[building.id];
+            let rabbitDisplay = '';
+            if (assignedRabbitId) {
+                const rabbit = GameState.rabbits.find(r => r.id === assignedRabbitId);
+                if (rabbit) {
+                    const typeData = RABBIT_DATA.types.find(t => t.id === rabbit.typeId);
+                    const rarityData = RABBIT_DATA.rarities[rabbit.rarity];
+                    rabbitDisplay = `<div style="font-size: 0.8rem; color: ${rarityData.color}; margin-bottom: 5px;">🐰 ${typeData.name} (×${rarityData.multiplier.toFixed(2)})</div>`;
+                }
             }
-        }
 
-        // Milestone info
-        const milestoneMult = getMilestoneMultiplier(building.level);
-        const nextMilestone = getNextMilestone(building.level);
-        const nextMilestoneText = nextMilestone
-            ? `Next: L${nextMilestone} → ${milestoneMult * 2}x`
-            : 'MAX!';
+            // Milestone info
+            const milestoneMult = getMilestoneMultiplier(building.level);
+            const nextMilestone = getNextMilestone(building.level);
+            const nextMilestoneText = nextMilestone
+                ? `Next: L${nextMilestone} → ${milestoneMult * 2}x`
+                : 'MAX!';
 
-        content += `
+            content += `
                 <div class="building-stats">
                     <div>Level: <span id="level-${index}">${building.level}</span></div>
                     <div>Produces: <span id="prod-${index}">${getProductionRate(building).format()}</span>/sec</div>
@@ -569,38 +687,51 @@ function renderBuildings() {
                     </button>
                 </div>
             `;
-    } else {
-        content += `
+        } else {
+            content += `
                 <div class="locked-stats">🔒 LOCKED</div>
                 <div class="locked-reason">
                     Requires ${building.unlockRequirement.buildingId.replace('-', ' ')} Level ${building.unlockRequirement.level}
                 </div>
             `;
-    }
+        }
 
-    div.innerHTML = content;
-    container.appendChild(div);
+        div.innerHTML = content;
+        container.appendChild(div);
 
-    // Attach event listeners if unlocked
-    if (building.unlocked) {
-        document.getElementById(`btn-collect-${index}`).onclick = () => collectDust(index);
-        document.getElementById(`btn-upgrade-${index}`).onclick = () => upgradeBuilding(index);
-    }
-});
+        // Attach event listeners if unlocked
+        if (building.unlocked) {
+            document.getElementById(`btn-collect-${index}`).onclick = () => collectDust(index);
+            document.getElementById(`btn-upgrade-${index}`).onclick = () => upgradeBuilding(index);
+        }
+    });
 }
 
 function updateUI() {
-    // Currency
-    document.getElementById('dust-value').textContent = GameState.magicDust.format();
+    // Update Info Bar (new tab system)
+    updateInfoBar();
+
+    // Currency (old system - for backward compat)
+    const dustValueEl = document.getElementById('dust-value');
+    if (dustValueEl) {
+        dustValueEl.textContent = GameState.magicDust.format();
+    }
 
     // Calculate total rate for header
     let totalRate = new BigNumber(0);
     GameState.buildings.forEach(b => {
         if (b.unlocked) totalRate = totalRate.add(getProductionRate(b));
     });
-    document.getElementById('rate-value').textContent = totalRate.format();
 
-    // Update each building
+    const rateValueEl = document.getElementById('rate-value');
+    if (rateValueEl) {
+        rateValueEl.textContent = totalRate.format();
+    }
+
+    // Update grassland scene (new system)
+    renderGrasslandScene();
+
+    // Update each building (old system - for backward compat)
     GameState.buildings.forEach((building, index) => {
         if (building.unlocked) {
             const levelEl = document.getElementById(`level-${index}`);
@@ -608,46 +739,76 @@ function updateUI() {
             if (!levelEl) return;
 
             levelEl.textContent = building.level;
-            document.getElementById(`prod-${index}`).textContent = getProductionRate(building).format();
-            document.getElementById(`accum-${index}`).textContent = new BigNumber(building.accumulatedDust).format();
+            const prodEl = document.getElementById(`prod-${index}`);
+            if (prodEl) prodEl.textContent = getProductionRate(building).format();
+
+            const accumEl = document.getElementById(`accum-${index}`);
+            if (accumEl) accumEl.textContent = new BigNumber(building.accumulatedDust).format();
 
             const upgradeCost = getUpgradeCost(building);
-            document.getElementById(`cost-${index}`).textContent = upgradeCost.format();
-            document.getElementById(`btn-upgrade-${index}`).disabled = !canAffordUpgrade(building);
+            const costEl = document.getElementById(`cost-${index}`);
+            if (costEl) costEl.textContent = upgradeCost.format();
+
+            const btnUpgrade = document.getElementById(`btn-upgrade-${index}`);
+            if (btnUpgrade) btnUpgrade.disabled = !canAffordUpgrade(building);
         }
     });
 
     // Stats
-    document.getElementById('total-earned').textContent = GameState.totalEarned.format();
-    document.getElementById('prestige-count').textContent = GameState.prestigeCount;
+    const totalEarnedEl = document.getElementById('total-earned');
+    if (totalEarnedEl) totalEarnedEl.textContent = GameState.totalEarned.format();
 
-    // Boost Display
+    const prestigeCountEl = document.getElementById('prestige-count');
+    if (prestigeCountEl) prestigeCountEl.textContent = GameState.prestigeCount;
+
+    // Boost Display (old system)
     const boostEl = document.getElementById('boost-display');
-    if (GameState.activeBoosts.length > 0) {
-        boostEl.classList.remove('hidden');
-        // Show ONLY the active boost multiplier (not combined with token bonus)
-        let boostMult = 1;
-        GameState.activeBoosts.forEach(b => boostMult *= b.multiplier);
+    if (boostEl) {
+        if (GameState.activeBoosts.length > 0) {
+            boostEl.classList.remove('hidden');
+            // Show ONLY the active boost multiplier (not combined with token bonus)
+            let boostMult = 1;
+            GameState.activeBoosts.forEach(b => boostMult *= b.multiplier);
 
-        // Find the boost that lasts the longest to display timer
-        const longest = GameState.activeBoosts.reduce((prev, current) =>
-            (prev.endTime > current.endTime) ? prev : current
-        );
+            // Find the boost that lasts the longest to display timer
+            const longest = GameState.activeBoosts.reduce((prev, current) =>
+                (prev.endTime > current.endTime) ? prev : current
+            );
 
-        const remaining = Math.max(0, longest.endTime - Date.now());
-        const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
-        const mins = Math.floor((remaining / (1000 * 60)) % 60);
-        const secs = Math.floor((remaining / 1000) % 60);
+            const remaining = Math.max(0, longest.endTime - Date.now());
+            const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
+            const mins = Math.floor((remaining / (1000 * 60)) % 60);
+            const secs = Math.floor((remaining / 1000) % 60);
 
-        document.getElementById('boost-text').textContent = `${boostMult}x Boost`;
-        document.getElementById('boost-timer').textContent = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    } else {
-        boostEl.classList.add('hidden');
+            const boostTextEl = document.getElementById('boost-text');
+            if (boostTextEl) boostTextEl.textContent = `${boostMult}x Boost`;
+
+            const boostTimerEl = document.getElementById('boost-timer');
+            if (boostTimerEl) boostTimerEl.textContent = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        } else {
+            boostEl.classList.add('hidden');
+        }
     }
 
-    // Refresh Prestige Modal if open
-    if (!document.getElementById('prestige-modal').classList.contains('hidden')) {
+    // Update mini-game timers (new system)
+    updateMiniGameTimers();
+
+    // Refresh Prestige Modal if open (old system)
+    const prestigeModal = document.getElementById('prestige-modal');
+    if (prestigeModal && !prestigeModal.classList.contains('hidden')) {
         updatePrestigeModal();
+    }
+
+    // Update prestige tab if on that tab (new system)
+    if (currentTab === 'ascend') {
+        updatePrestigeTab();
+    }
+
+    // Update rabbit count badge
+    const rabbitBadge = document.getElementById('rabbit-count-badge');
+    if (rabbitBadge && GameState.rabbits.length > 0) {
+        rabbitBadge.textContent = GameState.rabbits.length;
+        rabbitBadge.classList.remove('hidden');
     }
 }
 
@@ -1350,6 +1511,736 @@ function gameLoop() {
 setInterval(saveGame, 30000);
 
 // ============================================
+// TAB SYSTEM (Epic 7)
+// ============================================
+let currentTab = 'empire';
+
+function switchTab(tabName) {
+    // Hide all tab panels
+    document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.remove('active');
+    });
+
+    // Remove active from all nav buttons
+    document.querySelectorAll('.nav-tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    // Show selected tab panel
+    const targetPanel = document.getElementById(`tab-${tabName}`);
+    if (targetPanel) {
+        targetPanel.classList.add('active');
+    }
+
+    // Activate selected nav button
+    const targetBtn = document.querySelector(`.nav-tab[data-tab="${tabName}"]`);
+    if (targetBtn) {
+        targetBtn.classList.add('active');
+    }
+
+    currentTab = tabName;
+
+    // Update content for the tab
+    if (tabName === 'rabbits') {
+        renderRabbitsTab();
+    } else if (tabName === 'ascend') {
+        updatePrestigeTab();
+    } else if (tabName === 'games') {
+        updateMiniGamesTab();
+    }
+}
+
+function renderGrasslandScene() {
+    const container = document.getElementById('buildings-container');
+    if (!container) {
+        console.warn('⚠️ buildings-container not found! Scene cannot render');
+        return;
+    }
+
+    console.log(`🌳 Rendering grassland scene with ${GameState.buildings.length} buildings...`);
+    container.innerHTML = '';
+
+    // Building positions (x, y) for 800x600 scene - percentage based for responsiveness 
+    const positions = [
+        { x: '15%', y: '60%' },   //Rabbit Farm - bottom left
+        { x: '45%', y: '50%' },    // Weed Patch - center  
+        { x: '75%', y: '60%' },    // Bake Shop - bottom right
+        { x: '25%', y: '25%' },    // Infused Field - top left
+        { x: '65%', y: '25%' }     // Energy Extractor - top right
+    ];
+
+    // Building image files
+    const imageFiles = [
+        'rabbit-farm.png',
+        'weed-patch.png',
+        'bake-shop.png',
+        'infused-field.png',
+        'energy-extractor.png'
+    ];
+
+    GameState.buildings.forEach((building, index) => {
+        console.log(`  Building ${index}: ${building.name}, unlocked: ${building.unlocked}, position: ${positions[index].x}, ${positions[index].y}`);
+
+        const buildingEl = document.createElement('div');
+        buildingEl.className = building.unlocked ? 'building-spatial' : 'building-spatial locked';
+        buildingEl.style.left = positions[index].x;
+        buildingEl.style.top = positions[index].y;
+        buildingEl.dataset.buildingIndex = index;
+
+        // Create building sprite container
+        const spriteContainer = document.createElement('div');
+        spriteContainer.className = 'building-sprite-container';
+
+        // Building sprite (image)
+        const sprite = document.createElement('div');
+        sprite.className = 'building-sprite';
+
+        const img = document.createElement('img');
+        img.src = imageFiles[index];
+        img.alt = building.name;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        sprite.appendChild(img);
+
+        // Lock icon for locked buildings
+        if (!building.unlocked) {
+            const lockIcon = document.createElement('div');
+            lockIcon.className = 'lock-icon';
+            lockIcon.textContent = '🔒';
+            sprite.appendChild(lockIcon);
+        }
+
+        // Collect bubble (only for unlocked buildings with accumulated dust)
+        const accumulated = new BigNumber(building.accumulatedDust);
+        if (building.unlocked && accumulated.value > 0) {
+            const bubble = document.createElement('div');
+            bubble.className = 'collect-bubble';
+            bubble.textContent = `💰 ${accumulated.format()}`;
+            bubble.onclick = (e) => {
+                e.stopPropagation();
+                collectDust(index);
+            };
+            spriteContainer.appendChild(bubble);
+        }
+
+        // Building label
+        const label = document.createElement('div');
+        label.className = 'building-label';
+        if (building.unlocked) {
+            label.textContent = `${building.name} L${building.level}`;
+        } else {
+            const unlockReq = building.unlockRequirement;
+            if (unlockReq && unlockReq.buildingId) {
+                const reqBuilding = GameState.buildings.find(b => b.id === unlockReq.buildingId);
+                label.textContent = `🔒 ${reqBuilding?.name || 'Building'} L${unlockReq.level}`;
+            } else {
+                label.textContent = `🔒 ${building.name}`;
+            }
+        }
+
+        spriteContainer.appendChild(sprite);
+        spriteContainer.appendChild(label);
+        buildingEl.appendChild(spriteContainer);
+
+        // Click handler - show building panel
+        if (building.unlocked) {
+            buildingEl.onclick = () => showBuildingPanel(index);
+        }
+
+        container.appendChild(buildingEl);
+    });
+
+    console.log(`✅ Rendered ${container.children.length} spatial buildings`);
+}
+
+// Show building detail panel
+let currentPanelBuilding = null;
+
+function showBuildingPanel(buildingIndex) {
+    console.log('🔍 showBuildingPanel called with index:', buildingIndex);
+
+    const building = GameState.buildings[buildingIndex];
+    if (!building || !building.unlocked) {
+        console.warn('⚠️ Building not found or locked, index:', buildingIndex);
+        return;
+    }
+
+    currentPanelBuilding = buildingIndex;
+    const panel = document.getElementById('building-panel');
+    const nameEl = document.getElementById('panel-building-name');
+    const statsEl = document.getElementById('panel-building-stats');
+
+    console.log('📋 Panel element:', panel);
+    console.log('📋 Name element:', nameEl);
+    console.log('📋 Stats element:', statsEl);
+
+    if (!panel) {
+        console.error('❌ building-panel element not found!');
+        return;
+    }
+
+    // Set building name
+    nameEl.textContent = `${building.name} (Level ${building.level})`;
+
+    // Set stats
+    const rate = getProductionRate(building);
+    const accumulated = new BigNumber(building.accumulatedDust);
+    const upgradeCost = getUpgradeCost(building);
+    const canAfford = canAffordUpgrade(building);
+
+    statsEl.innerHTML = `
+        <div><span>Production:</span><span class="stat-value accent-green">+${rate.format()}/s</span></div>
+        <div><span>Ready to Collect:</span><span class="stat-value">${accumulated.format()}</span></div>
+        <div><span>Upgrade Cost:</span><span class="stat-value">${upgradeCost.format()}</span></div>
+    `;
+
+    // Set button states
+    const collectBtn = document.getElementById('panel-collect-btn');
+    const upgradeBtn = document.getElementById('panel-upgrade-btn');
+
+    console.log('🔘 Collect button:', collectBtn);
+    console.log('🔘 Upgrade button:', upgradeBtn);
+
+    if (!collectBtn || !upgradeBtn) {
+        console.error('❌ Buttons not found in panel!');
+        return;
+    }
+
+    collectBtn.disabled = accumulated.value === 0;
+    collectBtn.textContent = accumulated.value > 0 ? `Collect ${accumulated.format()}` : 'Nothing to Collect';
+    collectBtn.onclick = () => {
+        collectDust(buildingIndex);
+        // Refresh panel to show new values
+        setTimeout(() => showBuildingPanel(buildingIndex), 100);
+    };
+
+    upgradeBtn.disabled = !canAfford;
+    upgradeBtn.textContent = `Upgrade (${upgradeCost.format()})`;
+    upgradeBtn.onclick = () => {
+        upgradeBuilding(buildingIndex);
+        // Refresh panel to show new level and cost
+        setTimeout(() => showBuildingPanel(buildingIndex), 100);
+    };
+
+    // Show panel
+    console.log('✅ Panel ready to show, removing hidden class');
+    panel.classList.remove('hidden');
+}
+
+function hideBuildingPanel() {
+    const panel = document.getElementById('building-panel');
+    panel.classList.add('hidden');
+    currentPanelBuilding = null;
+}
+
+// ============================================
+// WALKING RABBIT ANIMATION
+// ============================================
+let walkingRabbits = [];
+
+function spawnWalkingRabbit() {
+    const container = document.getElementById('rabbits-container');
+    if (!container) return;
+
+    // Building positions (match grassland scene)
+    const buildingPositions = [
+        { x: '15%', y: '60%' },   // Rabbit Farm
+        { x: '45%', y: '50%' },   // Weed Patch  
+        { x: '75%', y: '60%' },   // Bake Shop
+        { x: '25%', y: '25%' },   // Infused Field
+        { x: '65%', y: '25%' }    // Energy Extractor
+    ];
+
+    // Pick random start and end buildings
+    const startIdx = Math.floor(Math.random() * buildingPositions.length);
+    let endIdx = Math.floor(Math.random() * buildingPositions.length);
+    while (endIdx === startIdx) {
+        endIdx = Math.floor(Math.random() * buildingPositions.length);
+    }
+
+    const start = buildingPositions[startIdx];
+    const end = buildingPositions[endIdx];
+
+    // Create rabbit sprite
+    const rabbit = document.createElement('div');
+    rabbit.className = 'rabbit-sprite walking';
+    rabbit.textContent = '🐰';
+    rabbit.style.left = start.x;
+    rabbit.style.top = start.y;
+    rabbit.style.fontSize = '24px';
+
+    // Determine if rabbit should be flipped
+    const startX = parseFloat(start.x);
+    const endX = parseFloat(end.x);
+    if (endX < startX) {
+        rabbit.classList.add('flipped');
+    }
+
+    container.appendChild(rabbit);
+
+    // Animate to destination
+    setTimeout(() => {
+        rabbit.style.left = end.x;
+        rabbit.style.top = end.y;
+    }, 100);
+
+    // Remove and create new rabbit after animation
+    setTimeout(() => {
+        container.removeChild(rabbit);
+        // Respawn after delay
+        setTimeout(spawnWalkingRabbit, Math.random() * 2000 + 1000);
+    }, 3500);
+}
+
+function initWalkingRabbits() {
+    // Spawn 2-3 rabbits at different times
+    setTimeout(() => spawnWalkingRabbit(), 1000);
+    setTimeout(() => spawnWalkingRabbit(), 3000);
+    setTimeout(() => spawnWalkingRabbit(), 5000);
+}
+
+// ============================================
+// PARTICLE EFFECTS
+// ============================================
+
+function spawnCollectParticles(x, y) {
+    const scene = document.getElementById('grassland-scene');
+    if (!scene) return;
+
+    // Create 8-12 particles
+    const particleCount = Math.floor(Math.random() * 5) + 8;
+
+    for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle collect-particle';
+        particle.textContent = '✨';
+
+        // Random offset from center
+        const offsetX = (Math.random() - 0.5) * 60;
+        const offsetY = (Math.random() - 0.5) * 40;
+
+        particle.style.left = `calc(${x} + ${offsetX}px)`;
+        particle.style.top = `calc(${y} + ${offsetY}px)`;
+        particle.style.animationDelay = `${Math.random() * 0.2}s`;
+
+        scene.appendChild(particle);
+
+        // Remove after animation
+        setTimeout(() => {
+            if (particle.parentNode) {
+                scene.removeChild(particle);
+            }
+        }, 1500);
+    }
+}
+
+function spawnUpgradeEffect(buildingElement) {
+    if (!buildingElement) return;
+
+    const scene = document.getElementById('grassland-scene');
+    if (!scene) return;
+
+    const rect = buildingElement.getBoundingClientRect();
+    const sceneRect = scene.getBoundingClientRect();
+
+    const centerX = rect.left - sceneRect.left + rect.width / 2;
+    const centerY = rect.top - sceneRect.top + rect.height / 2;
+
+    // Create sparkle ring
+    const sparkleCount = 12;
+    for (let i = 0; i < sparkleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle upgrade-particle';
+        particle.textContent = '⭐';
+
+        const angle = (i / sparkleCount) * Math.PI * 2;
+        const radius = 60;
+        const offsetX = Math.cos(angle) * radius;
+        const offsetY = Math.sin(angle) * radius;
+
+        particle.style.left = `${centerX + offsetX}px`;
+        particle.style.top = `${centerY + offsetY}px`;
+        particle.style.animationDelay = `${i * 0.05}s`;
+
+        scene.appendChild(particle);
+
+        setTimeout(() => {
+            if (particle.parentNode) {
+                scene.removeChild(particle);
+            }
+        }, 1200);
+    }
+
+    // "+1 Level" text
+    const levelText = document.createElement('div');
+    levelText.className = 'level-up-text';
+    levelText.textContent = '+1 LEVEL';
+    levelText.style.left = `${centerX}px`;
+    levelText.style.top = `${centerY - 40}px`;
+
+    scene.appendChild(levelText);
+
+    setTimeout(() => {
+        if (levelText.parentNode) {
+            scene.removeChild(levelText);
+        }
+    }, 1500);
+}
+
+function renderRabbitsTab() {
+    const grid = document.getElementById('rabbit-grid-tab');
+    const noRabbitsMsg = document.getElementById('no-rabbits-tab');
+    const assignmentList = document.getElementById('assignment-list');
+
+    if (!grid) return;
+
+    if (GameState.rabbits.length === 0) {
+        grid.innerHTML = '';
+        noRabbitsMsg.classList.remove('hidden');
+        return;
+    }
+
+    noRabbitsMsg.classList.add('hidden');
+    grid.innerHTML = '';
+
+    GameState.rabbits.forEach(rabbit => {
+        const typeData = RABBIT_DATA.types.find(t => t.id === rabbit.typeId);
+        const rarityData = RABBIT_DATA.rarities[rabbit.rarity];
+        const isAssigned = Object.values(GameState.assignedRabbits).includes(rabbit.id);
+
+        const card = document.createElement('div');
+        card.className = `rabbit-card ${isAssigned ? 'assigned' : ''}`;
+        card.style.borderColor = rarityData.color;
+
+        card.innerHTML = `
+            <div class="rabbit-name">${typeData.name}</div>
+            <div class="rabbit-rarity" style="color: ${rarityData.color}">${rarityData.name}</div>
+            <div class="rabbit-mult">×${rarityData.multiplier.toFixed(2)}</div>
+            <div class="rabbit-status">Level ${rabbit.level}</div>
+            ${isAssigned ? '<div class="assigned-badge">✅ Assigned</div>' : ''}
+            <button class="game-btn assign-btn" style="margin-top: 8px; padding: 6px 12px; font-size: 0.8rem;" 
+                    onclick="openAssignMenu('${rabbit.id}')">
+                ${isAssigned ? 'Reassign' : 'Assign'}
+            </button>
+        `;
+
+        grid.appendChild(card);
+    });
+
+    // Update assignment list
+    if (assignmentList) {
+        assignmentList.innerHTML = '';
+        GameState.buildings.forEach(building => {
+            if (!building.unlocked) return;
+
+            const assignedId = GameState.assignedRabbits[building.id];
+            if (assignedId) {
+                const rabbit = GameState.rabbits.find(r => r.id === assignedId);
+                if (rabbit) {
+                    const typeData = RABBIT_DATA.types.find(t => t.id === rabbit.typeId);
+                    const rarityData = RABBIT_DATA.rarities[rabbit.rarity];
+
+                    const item = document.createElement('div');
+                    item.className = 'assignment-item';
+                    item.innerHTML = `
+                        <span>${building.name}:</span>
+                        <span style="color: ${rarityData.color}">🐰 ${typeData.name} (×${rarityData.multiplier.toFixed(1)})</span>
+                    `;
+                    assignmentList.appendChild(item);
+                }
+            }
+        });
+
+        if (assignmentList.children.length === 0) {
+            assignmentList.innerHTML = '<div style="color: #888; padding: 10px; text-align: center;">No rabbits assigned yet</div>';
+        }
+    }
+}
+
+function updatePrestigeTab() {
+    const currentTokens = GameState.burrowTokens;
+    const reward = calculatePrestigeReward();
+    const lifetime = GameState.lifetimeDust;
+    const currentMult = 1 + (currentTokens * 0.10);
+
+    document.getElementById('current-tokens-tab').textContent = currentTokens;
+    document.getElementById('current-multiplier-tab').textContent = `${currentMult.toFixed(1)}x`;
+    document.getElementById('lifetime-dust-tab').textContent = lifetime.format();
+    document.getElementById('prestige-reward-tab').textContent = `+${reward} Tokens`;
+
+    const newTotal = currentTokens + reward;
+    const newMult = 1 + (newTotal * 0.10);
+
+    // Calculate next goal
+    let nextGoal = new BigNumber(Math.pow(10, 10));
+    if (lifetime.toNumber() > 10) {
+        const currentLog = Math.floor(Math.log10(lifetime.toNumber()));
+        const nextExp = Math.max(10, currentLog + 1);
+        nextGoal = new BigNumber(Math.pow(10, nextExp));
+    }
+    document.getElementById('next-token-goal-tab').textContent = nextGoal.format();
+
+    // Button state
+    const btn = document.getElementById('do-prestige-btn-tab');
+    if (reward >= 1) {
+        btn.disabled = false;
+        btn.classList.remove('disabled');
+    } else {
+        btn.disabled = true;
+        btn.classList.add('disabled');
+    }
+}
+
+function updateMiniGamesTab() {
+    updateMiniGameTimers();
+}
+
+function updateMiniGameTimers() {
+    const now = Date.now();
+
+    // Wheel timer
+    const wheelReady = (now - GameState.lastSpinTime) >= WHEEL_COOLDOWN;
+    const wheelStatus = document.getElementById('wheel-status-tab');
+    if (wheelStatus) {
+        if (wheelReady) {
+            wheelStatus.innerHTML = '<span class="ready-status">✅ Ready to Spin!</span>';
+        } else {
+            const remaining = WHEEL_COOLDOWN - (now - GameState.lastSpinTime);
+            const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
+            const mins = Math.floor((remaining / (1000 * 60)) % 60);
+            const secs = Math.floor((remaining / 1000) % 60);
+            wheelStatus.innerHTML = `<span class="cooldown-status">🕐 ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}</span>`;
+        }
+    }
+
+    // Flip timer
+    const flipReady = (now - GameState.lastFlipTime) >= FLIP_COOLDOWN;
+    const flipStatus = document.getElementById('flip-status-tab');
+    if (flipStatus) {
+        if (flipReady) {
+            flipStatus.innerHTML = '<span class="ready-status">✅ Ready to Flip!</span>';
+        } else {
+            const remaining = FLIP_COOLDOWN - (now - GameState.lastFlipTime);
+            const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
+            const mins = Math.floor((remaining / (1000 * 60)) % 60);
+            const secs = Math.floor((remaining / 1000) % 60);
+            flipStatus.innerHTML = `<span class="cooldown-status">🕐 ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}</span>`;
+        }
+    }
+
+    // Update quick action status
+    const wheelQuickStatus = document.getElementById('wheel-quick-status');
+    if (wheelQuickStatus) {
+        wheelQuickStatus.textContent = wheelReady ? '✅' : '';
+    }
+    const flipQuickStatus = document.getElementById('flip-quick-status');
+    if (flipQuickStatus) {
+        flipQuickStatus.textContent = flipReady ? '✅' : '';
+    }
+}
+
+function updateInfoBar() {
+    const infoDust = document.getElementById('info-dust');
+    const infoRate = document.getElementById('info-rate');
+    const infoTokens = document.getElementById('info-tokens');
+    const infoTokensItem = document.getElementById('info-tokens-item');
+    const infoGems = document.getElementById('info-gems');
+    const infoBoost = document.getElementById('info-boost');
+    const infoBoostItem = document.getElementById('info-boost-item');
+
+    if (infoDust) infoDust.textContent = GameState.magicDust.format();
+
+    if (infoRate) {
+        let totalRate = new BigNumber(0);
+        GameState.buildings.forEach(b => {
+            if (b.unlocked) totalRate = totalRate.add(getProductionRate(b));
+        });
+        infoRate.textContent = totalRate.format() + '/s';
+    }
+
+    if (infoTokens && GameState.burrowTokens > 0) {
+        infoTokens.textContent = GameState.burrowTokens;
+        if (infoTokensItem) infoTokensItem.classList.remove('hidden');
+    } else if (infoTokensItem) {
+        infoTokensItem.classList.add('hidden');
+    }
+
+    if (infoGems) {
+        infoGems.textContent = GameState.gems;
+    }
+
+    if (infoBoost && GameState.activeBoosts.length > 0) {
+        let boostMult = 1;
+        GameState.activeBoosts.forEach(b => boostMult *= b.multiplier);
+        infoBoost.textContent = `🔥 ${boostMult}x`;
+        infoBoostItem.classList.remove('hidden');
+    } else if (infoBoostItem) {
+        infoBoostItem.classList.add('hidden');
+    }
+}
+
+
+// ============================================
+// SHOP SYSTEM
+// ============================================
+
+function openShop() {
+    const modal = document.getElementById('shop-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function closeShop() {
+    const modal = document.getElementById('shop-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function buyItem(itemId, cost) {
+    // Check if player has enough gems
+    if (GameState.gems < cost) {
+        showNumberPop('❌ Not enough gems!', '#ff0000');
+        return;
+    }
+
+    // Deduct gems
+    GameState.gems -= cost;
+
+    // Play purchase sound
+    playSound('purchase');
+
+    // Grant item based on type
+    if (itemId.startsWith('crate-')) {
+        handleCratePurchase(itemId);
+    } else if (itemId === 'boost-2x') {
+        handleBoostPurchase();
+    } else if (itemId === 'skip-time') {
+        handleSkipTime();
+    }
+
+    // Update UI and save
+    updateUI();
+    saveGame();
+    showNumberPop(`✓ Purchased ${itemId}!`, '#ffcb05');
+}
+
+function handleCratePurchase(crateType) {
+    let rarity;
+
+    // Determine rarity based on crate type
+    if (crateType === 'crate-common') {
+        // Common crate: 70% common, 25% rare, 5% epic
+        const roll = Math.random();
+        if (roll < 0.70) rarity = 'common';
+        else if (roll < 0.95) rarity = 'rare';
+        else rarity = 'epic';
+    } else if (crateType === 'crate-rare') {
+        // Rare crate: 60% rare, 35% epic, 5% legendary
+        const roll = Math.random();
+        if (roll < 0.60) rarity = 'rare';
+        else if (roll < 0.95) rarity = 'epic';
+        else rarity = 'legendary';
+    } else if (crateType === 'crate-epic') {
+        // Epic crate: 50% epic, 45% legendary, 5% mythic
+        const roll = Math.random();
+        if (roll < 0.50) rarity = 'epic';
+        else if (roll < 0.95) rarity = 'legendary';
+        else rarity = 'mythic';
+    }
+
+    // Add rabbit using existing function
+    addRabbit(rarity);
+    showNumberPop(`🎁 Got ${rarity} rabbit!`, RABBIT_DATA.rarities[rarity].color);
+}
+
+function handleBoostPurchase() {
+    const endTime = Date.now() + (60 * 60 * 1000); // 1 hour
+    GameState.activeBoosts.push({
+        id: 'shop-boost',
+        multiplier: 2,
+        endTime: endTime
+    });
+    showNumberPop('⚡ 2x Production for 1 hour!', '#4CAF50');
+}
+
+function handleSkipTime() {
+    const skipHours = 1;
+    const skipMs = skipHours * 60 * 60 * 1000;
+
+    // Calculate production for skipped time
+    GameState.buildings.forEach(building => {
+        if (!building.unlocked) return;
+        const rate = getProductionRate(building).value;
+        const skipped = rate * (skipMs / 1000);
+        building.accumulatedDust += skipped;
+    });
+
+    showNumberPop('⏰ Skipped 1 hour of production!', '#2196F3');
+}
+
+function buyPremium(productId, price) {
+    // In production, this would call real payment API
+    // For now, simulate purchase
+
+    if (confirm(`Purchase ${productId} for €${price}?\n\n(In the web version, this is simulated. Real payments would be processed via Stripe/PayPal or app stores.)`)) {
+        if (productId === 'no-ads-day') {
+            activateNoAds(24); // 24 hours
+        } else if (productId === 'no-ads-week') {
+            activateNoAds(24 * 7); // 7 days
+        }
+
+        // Track purchase
+        GameState.purchaseHistory.push({
+            product: productId,
+            price: price,
+            timestamp: Date.now()
+        });
+
+        saveGame();
+        showNumberPop('👑 Purchase successful!', '#4CAF50');
+    }
+}
+
+function activateNoAds(hours) {
+    const durationMs = hours * 60 * 60 * 1000;
+    GameState.noAdsUntil = Date.now() + durationMs;
+    updateUI();
+}
+
+function openSettings() {
+    const modal = document.getElementById('settings-modal');
+    if (modal) {
+        // Update UI with current settings
+        const sfxSlider = document.getElementById('sfx-volume');
+        const sfxValue = document.getElementById('sfx-value');
+        const soundToggle = document.getElementById('sound-toggle');
+        const particlesToggle = document.getElementById('particles-toggle');
+
+        if (sfxSlider) sfxSlider.value = GameState.settings.sfxVolume * 100;
+        if (sfxValue) sfxValue.textContent = Math.round(GameState.settings.sfxVolume * 100) + '%';
+        if (soundToggle) soundToggle.checked = GameState.settings.soundEnabled;
+        if (particlesToggle) particlesToggle.checked = GameState.settings.particlesEnabled;
+
+        modal.classList.remove('hidden');
+    }
+}
+
+function closeSettings() {
+    const modal = document.getElementById('settings-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    saveGame(); // Save settings
+}
+
+function hasNoAds() {
+    return Date.now() < GameState.noAdsUntil;
+}
+
+// ============================================
 // INITIALIZATION
 // ============================================
 function init() {
@@ -1357,6 +2248,9 @@ function init() {
 
     // Load saved game
     const hasExistingSave = loadGame();
+
+    // Initialize audio (needs user interaction due to browser autoplay policies)
+    document.addEventListener('click', () => initAudio(), { once: true });
 
     // Check for offline progress
     if (hasExistingSave) {
@@ -1372,41 +2266,140 @@ function init() {
     }
 
     // Set up event listeners
-    // document.getElementById('collect-btn').onclick = collectDust; // Removed: now dynamic
-    // document.getElementById('upgrade-btn').onclick = upgradeBuilding; // Removed: now dynamic
-    document.getElementById('reset-btn').onclick = resetGame;
-    // Mini-Games (now on main page, keep modal for legacy)
-    document.getElementById('minigames-btn').onclick = showMinigamesModal;
-    document.getElementById('close-minigames-btn').onclick = hideMinigamesModal;
-    document.getElementById('spin-wheel-btn').onclick = spinWheel;
-    document.getElementById('play-coin-btn').onclick = flipCoin;
+    // Tab Navigation (new system)
+    document.querySelectorAll('.nav-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabName = btn.dataset.tab;
+            if (tabName) switchTab(tabName);
+        });
+    });
+
+    // Quick Action Buttons (new system)
+    const quickShopBtn = document.getElementById('quick-shop-btn');
+    if (quickShopBtn) quickShopBtn.onclick = openShop;
+
+    const quickWheelBtn = document.getElementById('quick-wheel-btn');
+    if (quickWheelBtn) quickWheelBtn.onclick = spinWheel;
+
+    const quickFlipBtn = document.getElementById('quick-flip-btn');
+    if (quickFlipBtn) quickFlipBtn.onclick = flipCoin;
+
+    // Shop modal
+    const closeShopBtn = document.getElementById('close-shop-btn');
+    if (closeShopBtn) closeShopBtn.onclick = closeShop;
+
+    // Settings modal
+    const settingsBtn = document.getElementById('settings-btn');
+    if (settingsBtn) settingsBtn.onclick = openSettings;
+
+    const closeSettingsBtn = document.getElementById('close-settings-btn');
+    if (closeSettingsBtn) closeSettingsBtn.onclick = closeSettings;
+
+    // Settings controls
+    const sfxSlider = document.getElementById('sfx-volume');
+    const sfxValue = document.getElementById('sfx-value');
+    if (sfxSlider && sfxValue) {
+        sfxSlider.oninput = function () {
+            GameState.settings.sfxVolume = this.value / 100;
+            sfxValue.textContent = this.value + '%';
+        };
+    }
+
+    const soundToggle = document.getElementById('sound-toggle');
+    if (soundToggle) {
+        soundToggle.onchange = function () {
+            GameState.settings.soundEnabled = this.checked;
+        };
+    }
+
+    const particlesToggle = document.getElementById('particles-toggle');
+    if (particlesToggle) {
+        particlesToggle.onchange = function () {
+            GameState.settings.particlesEnabled = this.checked;
+        };
+    }
+
+    // Tab-specific buttons (new system)
+    const spinWheelBtnTab = document.getElementById('spin-wheel-btn-tab');
+    if (spinWheelBtnTab) spinWheelBtnTab.onclick = spinWheel;
+
+    const playCoinBtnTab = document.getElementById('play-coin-btn-tab');
+    if (playCoinBtnTab) playCoinBtnTab.onclick = flipCoin;
+
+    const openCrateBtnTab = document.getElementById('open-crate-btn-tab');
+    if (openCrateBtnTab) openCrateBtnTab.onclick = openCrate;
+
+    const doPrestigeBtnTab = document.getElementById('do-prestige-btn-tab');
+    if (doPrestigeBtnTab) doPrestigeBtnTab.onclick = performPrestige;
+
+    const resetAscendBtnTab = document.getElementById('reset-ascend-btn-tab');
+    if (resetAscendBtnTab) resetAscendBtnTab.onclick = resetAscendProgress;
+
+    // Old system buttons (for backward compat)
+    const resetBtn = document.getElementById('reset-btn');
+    if (resetBtn) resetBtn.onclick = resetGame;
+
+    // Mini-Games (legacy modals)
+    const minigamesBtn = document.getElementById('minigames-btn');
+    if (minigamesBtn) minigamesBtn.onclick = showMinigamesModal;
+
+    const closeMinigamesBtn = document.getElementById('close-minigames-btn');
+    if (closeMinigamesBtn) closeMinigamesBtn.onclick = hideMinigamesModal;
+
+    const spinBtn = document.getElementById('spin-wheel-btn');
+    if (spinBtn) spinBtn.onclick = spinWheel;
+
+    const playCoinBtn = document.getElementById('play-coin-btn');
+    if (playCoinBtn) playCoinBtn.onclick = flipCoin;
+
     // Bind Modal Buttons
     const spinBtnModal = document.getElementById('spin-wheel-btn-modal');
     if (spinBtnModal) spinBtnModal.onclick = spinWheel;
     const playCoinBtnModal = document.getElementById('play-coin-btn-modal');
     if (playCoinBtnModal) playCoinBtnModal.onclick = flipCoin;
 
-    // Prestige Buttons
-    document.getElementById('prestige-btn').onclick = showPrestigeModal;
-    document.getElementById('close-prestige-btn').onclick = hidePrestigeModal;
-    document.getElementById('do-prestige-btn').onclick = performPrestige;
-    document.getElementById('reset-ascend-btn').onclick = resetAscendProgress;
+    // Prestige Buttons (legacy)
+    const prestigeBtn = document.getElementById('prestige-btn');
+    if (prestigeBtn) prestigeBtn.onclick = showPrestigeModal;
 
-    // Mini-Game Cards (Main UI)
+    const closePrestigeBtn = document.getElementById('close-prestige-btn');
+    if (closePrestigeBtn) closePrestigeBtn.onclick = hidePrestigeModal;
+
+    const doPrestigeBtn = document.getElementById('do-prestige-btn');
+    if (doPrestigeBtn) doPrestigeBtn.onclick = performPrestige;
+
+    const resetAscendBtn = document.getElementById('reset-ascend-btn');
+    if (resetAscendBtn) resetAscendBtn.onclick = resetAscendProgress;
+
+    // Mini-Game Cards (Main UI - legacy)
     const wheelCard = document.getElementById('wheel-card');
     if (wheelCard) wheelCard.onclick = spinWheel;
     const flipCard = document.getElementById('flip-card');
     if (flipCard) flipCard.onclick = flipCoin;
 
-    // Rabbit Manager
-    document.getElementById('rabbits-btn').onclick = showRabbitsModal;
-    document.getElementById('close-rabbits-btn').onclick = hideRabbitsModal;
-    document.getElementById('open-crate-btn').onclick = openCrate;
+    // Rabbit Manager (legacy)
+    const rabbitsBtn = document.getElementById('rabbits-btn');
+    if (rabbitsBtn) rabbitsBtn.onclick = showRabbitsModal;
+
+    const closeRabbitsBtn = document.getElementById('close-rabbits-btn');
+    if (closeRabbitsBtn) closeRabbitsBtn.onclick = hideRabbitsModal;
+
+    const openCrateBtn = document.getElementById('open-crate-btn');
+    if (openCrateBtn) openCrateBtn.onclick = openCrate;
+
+    // Building Panel close button (new grassland UI)
+    const closePanelBtn = document.getElementById('close-panel-btn');
+    if (closePanelBtn) closePanelBtn.onclick = hideBuildingPanel;
 
     // Expose assign helpers globally for onclick
     window.openAssignMenu = openAssignMenu;
     window.hideAssignMenu = hideAssignMenu;
     window.hideCrateResult = hideCrateResult;
+    window.openRabbitSelector = openRabbitSelector;
+
+    // Expose shop functions globally for onclick
+    window.buyItem = buyItem;
+    window.buyPremium = buyPremium;
 
     // Click outside modal to close (for all modals)
     document.querySelectorAll('.modal').forEach(modal => {
@@ -1419,7 +2412,8 @@ function init() {
     });
 
     // Render buildings
-    renderBuildings();
+    renderBuildings(); // Legacy system
+    renderGrasslandScene(); // New tab system - explicitly render on init
 
     // Starter Rabbit
     if (GameState.rabbits.length === 0) {
@@ -1438,13 +2432,19 @@ function init() {
             showNumberPop('You found a rabbit! 🐰');
         }, 1000);
     }
+
+    // Render buildings again after starter rabbit
     renderBuildings();
+    renderGrasslandScene();
 
     // Initial UI update
     updateUI();
 
     // Start game loop
     gameLoop();
+
+    // Start walking rabbits animation
+    initWalkingRabbits();
 
     console.log('🐰 Game initialized!');
 }

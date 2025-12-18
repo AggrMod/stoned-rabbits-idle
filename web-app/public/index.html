@@ -12,68 +12,217 @@
 
 <body>
     <div id="game-container">
-        <!-- Header -->
-        <header id="header">
-            <div class="hero-banner"
-                style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 5px;">
-                <img src="rabbit-viking.jpg" class="hero-rabbit side-rabbit"
-                    style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--accent-gold); object-fit: cover; transform: rotate(-10deg);">
-                <div class="hero-center" style="display: flex; flex-direction: column; align-items: center;">
-                    <img src="rabbit-captain.jpg" class="hero-rabbit main-rabbit"
-                        style="width: 90px; height: 90px; border-radius: 50%; border: 4px solid var(--accent-gold); object-fit: cover; box-shadow: 0 0 15px rgba(255, 203, 5, 0.5); z-index: 2;">
-                    <div class="hero-title" style="margin-top: -15px; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">
-                        <h1
-                            style="margin: 0; line-height: 1; font-size: 1.6rem; text-transform: uppercase; letter-spacing: 1px; color: #fff;">
-                            Stoned Rabbits</h1>
-                        <h2
-                            style="margin: 0; font-size: 0.9rem; color: var(--accent-gold); letter-spacing: 3px; text-align: center;">
-                            Idle Empire</h2>
+        <!-- Persistent Info Bar -->
+        <div id="info-bar">
+            <div class="info-item">
+                <span class="info-label">💰</span>
+                <span id="info-dust">0</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">📈</span>
+                <span id="info-rate">0/s</span>
+            </div>
+            <div class="info-item hidden" id="info-tokens-item">
+                <span class="info-label">🪙</span>
+                <span id="info-tokens">0</span>
+            </div>
+            <div class="info-item" id="info-gems-item">
+                <span class="info-label">💎</span>
+                <span id="info-gems">100</span>
+            </div>
+            <div class="info-item hidden" id="info-boost-item">
+                <span id="info-boost">🔥 2x</span>
+            </div>
+            <button id="settings-btn" class="info-settings-btn" title="Settings">⚙️</button>
+        </div>
+
+        <!-- Tab Content Area -->
+        <div id="tab-content">
+            <!-- TAB 1: EMPIRE -->
+            <div id="tab-empire" class="tab-panel active">
+                <header class="tab-header">
+                    <h1>🏰 Stoned Rabbits</h1>
+                    <p class="subtitle">Idle Empire</p>
+                </header>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <button id="quick-shop-btn" class="quick-action-btn">
+                        <span class="action-icon">🛒</span>
+                        <span class="action-label">Shop</span>
+                    </button>
+                    <button id="quick-wheel-btn" class="quick-action-btn">
+                        <span class="action-icon">🎡</span>
+                        <span class="action-label">Wheel</span>
+                        <span id="wheel-quick-status" class="action-status"></span>
+                    </button>
+                    <button id="quick-flip-btn" class="quick-action-btn">
+                        <span class="action-icon">🪙</span>
+                        <span class="action-label">Flip</span>
+                        <span id="flip-quick-status" class="action-status"></span>
+                    </button>
+                </div>
+
+                <!-- Buildings Section -->
+                <div class="section-header">
+                    <h2>🏗️ Buildings</h2>
+                </div>
+
+                <!-- GRASSLAND SCENE -->
+                <div id="grassland-scene">
+                    <div id="buildings-container">
+                        <!-- Buildings positioned absolutely by JS -->
+                    </div>
+                    <div id="rabbits-container">
+                        <!-- Animated rabbit sprites -->
                     </div>
                 </div>
-                <img src="rabbit-masked.jpg" class="hero-rabbit side-rabbit"
-                    style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--accent-gold); object-fit: cover; transform: rotate(10deg);">
-            </div>
-            <div id="currency-display">
-                <div id="dust-amount">Magic Dust: <span id="dust-value">0</span></div>
-                <div id="production-rate">+<span id="rate-value">0</span>/sec</div>
-                <div id="boost-display" class="hidden">🔥 <span id="boost-text">2x Boost</span> (<span
-                        id="boost-timer">00:00</span>)</div>
-            </div>
-        </header>
 
-        <!-- Mini-Games Cards (visible on main page) -->
-        <div id="minigames-row">
-            <!-- Lucky Wheel Card -->
-            <div class="minigame-card-main" id="wheel-card">
-                <div class="card-header">
-                    <img src="wheel-icon.png" alt="Wheel" class="card-img-icon">
-                    <span class="ready-dot hidden" id="wheel-ready-dot"></span>
+                <!-- Building Detail Panel (slides in on click) -->
+                <div id="building-panel" class="hidden">
+                    <div id="building-panel-content">
+                        <button id="close-panel-btn" class="close-btn">✕</button>
+                        <h2 id="panel-building-name"></h2>
+                        <div id="panel-building-stats"></div>
+                        <div id="panel-building-actions">
+                            <button id="panel-collect-btn" class="game-btn collect-btn">Collect</button>
+                            <button id="panel-upgrade-btn" class="game-btn upgrade-btn">Upgrade</button>
+                        </div>
+                    </div>
                 </div>
-                <h3>Lucky Wheel</h3>
-                <div id="wheel-result" class="game-result hidden"></div>
-                <button id="spin-wheel-btn" class="game-btn upgrade-btn mini-btn">Spin!</button>
-                <div class="icon-timer" id="wheel-icon-timer"></div>
             </div>
 
-            <!-- Coin Flip Card -->
-            <div class="minigame-card-main" id="flip-card">
-                <div class="card-header">
-                    <img src="coin-icon.png" alt="Coin" class="card-img-icon">
-                    <span class="ready-dot hidden" id="flip-ready-dot"></span>
+            <!-- TAB 2: RABBITS -->
+            <div id="tab-rabbits" class="tab-panel">
+                <header class="tab-header">
+                    <h1>🐰 Rabbit Collection</h1>
+                </header>
+
+                <button id="open-crate-btn-tab" class="game-btn collect-btn" style="width: 100%; margin-bottom: 15px;">
+                    🎁 Open Crate (1,000 Dust)
+                </button>
+
+                <div id="rabbit-grid-tab" class="rabbit-grid"></div>
+                <div id="no-rabbits-tab" class="hidden" style="color: #888; padding: 20px; text-align: center;">
+                    No rabbits yet! Open a crate to get started.
                 </div>
-                <h3>Coin Flip</h3>
-                <div id="flip-result" class="game-result hidden"></div>
-                <button id="play-coin-btn" class="game-btn upgrade-btn mini-btn">Flip!</button>
-                <div class="icon-timer" id="flip-icon-timer"></div>
+
+                <div class="section-header" style="margin-top: 20px;">
+                    <h2>📌 Assignments</h2>
+                </div>
+                <div id="assignment-list"></div>
+            </div>
+
+            <!-- TAB 3: MINI-GAMES -->
+            <div id="tab-games" class="tab-panel">
+                <header class="tab-header">
+                    <h1>🎰 Mini-Games</h1>
+                </header>
+
+                <div class="minigame-tab-card">
+                    <div class="minigame-header">
+                        <img src="wheel-icon.png" class="minigame-icon-large">
+                        <div>
+                            <h3>🎡 Lucky Wheel</h3>
+                            <p>Spin for rewards!</p>
+                        </div>
+                    </div>
+                    <div id="wheel-status-tab" class="minigame-status"></div>
+                    <div id="wheel-result-tab" class="game-result hidden"></div>
+                    <button id="spin-wheel-btn-tab" class="game-btn upgrade-btn">Spin the Wheel!</button>
+                </div>
+
+                <div class="minigame-tab-card">
+                    <div class="minigame-header">
+                        <img src="coin-icon.png" class="minigame-icon-large">
+                        <div>
+                            <h3>🪙 Coin Flip</h3>
+                            <p>50/50 for 2x boost!</p>
+                        </div>
+                    </div>
+                    <div id="flip-status-tab" class="minigame-status"></div>
+                    <div id="flip-result-tab" class="game-result hidden"></div>
+                    <button id="play-coin-btn-tab" class="game-btn upgrade-btn">Flip the Coin!</button>
+                </div>
+
+                <div class="minigame-tab-card locked-game">
+                    <div class="minigame-header">
+                        <span style="font-size: 3rem;">⚔️</span>
+                        <div>
+                            <h3>Rumble Battles</h3>
+                            <p style="color: #888;">Coming Soon...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: ASCEND -->
+            <div id="tab-ascend" class="tab-panel">
+                <header class="tab-header">
+                    <h1>🌌 Ascend the Burrow</h1>
+                </header>
+
+                <img src="prestige-portal.png" class="prestige-portal-img">
+
+                <div class="prestige-stats-tab">
+                    <div class="stat-row">
+                        <span>Current Burrow Tokens:</span>
+                        <span id="current-tokens-tab" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Production Multiplier:</span>
+                        <span id="current-multiplier-tab" class="stat-value accent-green">1.0x</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>Lifetime Dust:</span>
+                        <span id="lifetime-dust-tab" class="stat-value accent-purple">0</span>
+                    </div>
+                </div>
+
+                <div class="prestige-reward-box">
+                    <p style="margin: 0; color: #aaa; font-size: 0.9rem;">Ascend now to earn:</p>
+                    <div id="prestige-reward-tab" class="prestige-reward-big">+0 Tokens</div>
+                    <p style="margin: 0; font-size: 0.8rem; color: #666;">
+                        Next token at <span id="next-token-goal-tab">10B</span> Lifetime Dust
+                    </p>
+                </div>
+
+                <button id="do-prestige-btn-tab" class="game-btn prestige-btn" disabled>
+                    🌌 ASCEND THE BURROW
+                </button>
+
+                <div class="prestige-warning">
+                    <p>⚠️ <strong>Resets:</strong> Buildings, Upgrades & Current Dust</p>
+                    <p>✅ <strong>Keeps:</strong> Rabbits, Tokens & Achievements</p>
+                </div>
+
+                <hr style="border-color: #333; margin: 20px 0;">
+                <button id="reset-ascend-btn-tab" class="reset-btn" style="width: 100%;">Reset Ascend Progress</button>
             </div>
         </div>
 
-        <!-- Main Building Area -->
-        <main id="building-area">
-            <!-- Buildings generated by JS -->
-        </main>
+        <!-- Bottom Tab Navigation -->
+        <nav id="bottom-tabs">
+            <button class="nav-tab active" data-tab="empire">
+                <span class="tab-icon">🏰</span>
+                <span class="tab-label">Empire</span>
+            </button>
+            <button class="nav-tab" data-tab="rabbits">
+                <span class="tab-icon">🐰</span>
+                <span class="tab-label">Rabbits</span>
+                <span id="rabbit-count-badge" class="tab-badge hidden">0</span>
+            </button>
+            <button class="nav-tab" data-tab="games">
+                <span class="tab-icon">🎰</span>
+                <span class="tab-label">Games</span>
+            </button>
+            <button class="nav-tab" data-tab="ascend">
+                <span class="tab-icon">🌌</span>
+                <span class="tab-label">Ascend</span>
+            </button>
+        </nav>
 
-        <!-- Offline Earnings Modal -->
+        <!-- Modals (kept for some popups) -->
         <div id="offline-modal" class="modal hidden">
             <div class="modal-content">
                 <img src="rabbit-captain.jpg" alt="Stoned Rabbit" class="modal-rabbit">
@@ -85,56 +234,6 @@
             </div>
         </div>
 
-        <!-- Mini-Games Modal (kept for legacy, but cards now on main page) -->
-        <div id="minigames-modal" class="modal hidden">
-            <div class="modal-content" style="max-width: 400px;">
-                <button id="close-minigames-btn" class="close-btn">×</button>
-                <h2>🎰 Mini-Games</h2>
-
-                <!-- Modal Wheel -->
-                <div class="modal-game-row" style="text-align: center;">
-                    <img src="wheel-icon.png"
-                        style="width: 60px; height: 60px; object-fit: contain; margin-bottom: 5px;">
-                    <h3>Lucky Wheel</h3>
-                    <p>Spin for Dust or Boosts!</p>
-                    <div id="wheel-result-modal" class="game-result hidden"></div>
-                    <button id="spin-wheel-btn-modal" class="game-btn upgrade-btn">Spin!</button>
-                    <div id="wheel-timer-modal" class="cooldown-timer hidden"></div>
-                </div>
-
-                <hr style="margin: 20px 0; border-color: #444;">
-
-                <!-- Modal Coin -->
-                <div class="modal-game-row" style="text-align: center;">
-                    <img src="coin-icon.png"
-                        style="width: 60px; height: 60px; object-fit: contain; margin-bottom: 5px;">
-                    <h3>Coin Flip</h3>
-                    <p>Double your production rate for 10m!</p>
-                    <div id="flip-result-modal" class="game-result hidden"></div>
-                    <button id="play-coin-btn-modal" class="game-btn upgrade-btn">Flip!</button>
-                    <div id="flip-timer-modal" class="cooldown-timer hidden"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Rabbits Modal -->
-        <div id="rabbits-modal" class="modal hidden">
-            <div class="modal-content" style="max-width: 400px;">
-                <h2>🐰 Your Rabbits</h2>
-                <div id="rabbit-grid" class="rabbit-grid"></div>
-                <div id="no-rabbits" class="hidden" style="color: #888; padding: 20px;">
-                    No rabbits yet! Open a crate to get started.
-                </div>
-
-                <div class="crate-section" style="border-top: 1px solid #444; padding-top: 15px; margin-top: 15px;">
-                    <button id="open-crate-btn" class="game-btn collect-btn">🎁 Open Crate (1,000 Dust)</button>
-                </div>
-
-                <button id="close-rabbits-btn" class="game-btn" style="margin-top: 15px;">Close</button>
-            </div>
-        </div>
-
-        <!-- Crate Result Modal -->
         <div id="crate-result-modal" class="modal hidden">
             <div class="modal-content" style="max-width: 300px;">
                 <h2>🎉 New Rabbit!</h2>
@@ -145,7 +244,6 @@
             </div>
         </div>
 
-        <!-- Assign Menu Modal -->
         <div id="assign-modal" class="modal hidden">
             <div class="modal-content" style="max-width: 300px;">
                 <h2>Assign to Building</h2>
@@ -154,102 +252,129 @@
             </div>
         </div>
 
-        <!-- Prestige Modal -->
-        <div id="prestige-modal" class="modal hidden">
-            <div class="modal-content prestige-theme"
-                style="border: 2px solid var(--accent-gold); box-shadow: 0 0 20px rgba(241, 196, 15, 0.3);">
-                <button id="close-prestige-btn" class="close-btn">×</button>
-                <img src="prestige-portal.png"
-                    style="width: 120px; display: block; margin: 0 auto 10px; filter: drop-shadow(0 0 10px rgba(241, 196, 15, 0.5)); transition: transform 2s infinite ease-in-out;">
-                <h2 style="color: var(--accent-gold); text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);">🌌 Ascend the
-                    Burrow</h2>
-
-                <div class="prestige-stats" style="margin: 20px 0;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <span>Current Burrow Tokens:</span>
-                        <span id="current-tokens" style="color: var(--accent-gold); font-weight: bold;">0</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                        <span>Lifetime Dust:</span>
-                        <span id="lifetime-dust" style="color: #9b59b6; font-weight: bold;">0</span>
-                    </div>
-
-                    <hr style="border-color: #444; margin-bottom: 20px;">
-
-                    <div class="reward-section"
-                        style="text-align: center; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px;">
-                        <p style="margin: 0; color: #aaa;">Ascend now to earn:</p>
-                        <div id="prestige-reward"
-                            style="font-size: 2.5rem; font-weight: bold; color: var(--accent-gold); margin: 10px 0;">+0
-                            Tokens</div>
-                        <p style="margin: 0; font-size: 0.8rem; color: #666;">(Next token at <span
-                                id="next-token-goal">10B</span> Lifetime Dust)</p>
-                    </div>
-
-                    <div style="margin-top: 20px; text-align: center;">
-                        <span style="color: #aaa;">New Production Multiplier:</span>
-                        <span id="new-multiplier"
-                            style="color: var(--accent-green); font-weight: bold; margin-left: 5px;">1x</span>
-                    </div>
-                </div>
-
-                <button id="do-prestige-btn" class="game-btn"
-                    style="width: 100%; background: linear-gradient(135deg, #f1c40f, #d35400); font-weight: bold; font-size: 1.2rem; margin-top: 10px;"
-                    disabled>ASCEND</button>
-                <div style="text-align: center; margin-top: 10px; font-size: 0.8rem; color: #e74c3c;">
-                    ⚠️ Resets Buildings, Upgrades & Current Dust.<br>
-                    ✅ Keeps Rabbits, Tokens & Achievements.
-                </div>
-
-                <hr style="border-color: #333; margin: 20px 0 15px 0;">
-                <button id="reset-ascend-btn" class="reset-btn" style="width: 100%;">Reset Ascend Progress</button>
-            </div>
-        </div>
-
         <!-- Footer -->
-        <!-- Bottom Tab Navigation -->
-        <nav id="bottom-tabs"
-            style="position: fixed; bottom: 0; left: 0; width: 100%; background: var(--bg-card); border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; box-shadow: 0 -5px 20px rgba(0,0,0,0.5);">
-            <button class="nav-tab" onclick="window.scrollTo({top:0, behavior:'smooth'})"
-                style="background:none; border:none; color: var(--accent-gold); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;">
-                <span style="font-size: 1.5rem;">🏰</span>
-                <span style="font-size: 0.7rem; font-weight: bold;">Empire</span>
-            </button>
-            <button class="nav-tab" onclick="document.getElementById('rabbits-btn').click()"
-                style="background:none; border:none; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;">
-                <span style="font-size: 1.5rem;">🐰</span>
-                <span style="font-size: 0.7rem;">Rabbits</span>
-            </button>
-            <button class="nav-tab" onclick="document.getElementById('minigames-btn').click()"
-                style="background:none; border:none; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;">
-                <span style="font-size: 1.5rem;">🎰</span>
-                <span style="font-size: 0.7rem;">Games</span>
-            </button>
-            <button class="nav-tab" onclick="document.getElementById('prestige-btn').click()"
-                style="background:none; border:none; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;">
-                <span style="font-size: 1.5rem;">🌌</span>
-                <span style="font-size: 0.7rem;">Ascend</span>
-            </button>
-        </nav>
-
-        <div style="height: 80px;"></div>
-
-        <footer id="footer" style="padding-bottom: 90px; text-align: center; color: #666; font-size: 0.8rem;">
-            <!-- Hidden Logic Buttons (Preserved for Binding) -->
-            <div style="display:none;">
-                <button id="rabbits-btn"></button>
-                <button id="minigames-btn"></button>
-                <button id="prestige-btn"></button>
-            </div>
-
-            <div id="stats" style="margin-bottom: 10px;">
+        <footer id="footer">
+            <div id="stats">
                 <span>Total: <span id="total-earned">0</span></span> |
                 <span>Prestiges: <span id="prestige-count">0</span></span>
             </div>
-
-            <button id="reset-btn" class="reset-btn" style="padding: 5px 10px; font-size: 0.7rem;">Hard Reset</button>
-            <div id="version">v0.2.1 - Vibrant UI</div>
+            <button id="reset-btn" class="reset-btn">Hard Reset</button>
+            <div id="version">v0.3.0 - Tab System</div>
         </footer>
+    </div>
+
+    <!-- SHOP MODAL -->
+    <div id="shop-modal" class="modal hidden">
+        <div class="modal-content shop-content">
+            <button id="close-shop-btn" class="close-btn">✕</button>
+            <h2 class="shop-title">💎 Gem Shop 💎</h2>
+
+            <!-- Crates Section -->
+            <div class="shop-section">
+                <h3 class="shop-section-title">🎁 Rabbit Crates</h3>
+                <div class="shop-items">
+                    <div class="shop-item">
+                        <span class="shop-item-icon">🎁</span>
+                        <span class="shop-item-name">Common Crate</span>
+                        <button class="shop-buy-btn" onclick="buyItem('crate-common', 50)">
+                            💎 50
+                        </button>
+                    </div>
+                    <div class="shop-item">
+                        <span class="shop-item-icon">✨</span>
+                        <span class="shop-item-name">Rare Crate</span>
+                        <button class="shop-buy-btn" onclick="buyItem('crate-rare', 150)">
+                            💎 150
+                        </button>
+                    </div>
+                    <div class="shop-item">
+                        <span class="shop-item-icon">⭐</span>
+                        <span class="shop-item-name">Epic Crate</span>
+                        <button class="shop-buy-btn" onclick="buyItem('crate-epic', 500)">
+                            💎 500
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Boosts Section -->
+            <div class="shop-section">
+                <h3 class="shop-section-title">⚡ Power-Ups</h3>
+                <div class="shop-items">
+                    <div class="shop-item">
+                        <span class="shop-item-icon">⚡</span>
+                        <span class="shop-item-name">2x Production (1h)</span>
+                        <button class="shop-buy-btn" onclick="buyItem('boost-2x', 100)">
+                            💎 100
+                        </button>
+                    </div>
+                    <div class="shop-item">
+                        <span class="shop-item-icon">⏰</span>
+                        <span class="shop-item-name">Skip 1 Hour</span>
+                        <button class="shop-buy-btn" onclick="buyItem('skip-time', 200)">
+                            💎 200
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Premium Section -->
+            <div class="shop-section premium-section">
+                <h3 class="shop-section-title">👑 Premium</h3>
+                <div class="shop-items">
+                    <div class="shop-item premium-item">
+                        <span class="shop-item-icon">🚫</span>
+                        <div>
+                            <div class="shop-item-name">Ad-Free Day Pass</div>
+                            <div class="shop-item-desc">24 hours of ad-free gameplay</div>
+                        </div>
+                        <button class="shop-buy-btn premium-btn" onclick="buyPremium('no-ads-day', 0.99)">
+                            €0.99
+                        </button>
+                    </div>
+                    <div class="shop-item premium-item">
+                        <span class="shop-item-icon">👑</span>
+                        <div>
+                            <div class="shop-item-name">Ad-Free Week</div>
+                            <div class="shop-item-desc">7 days of ad-free gameplay</div>
+                        </div>
+                        <button class="shop-buy-btn premium-btn" onclick="buyPremium('no-ads-week', 4.99)">
+                            €4.99
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content settings-content">
+            <button id="close-settings-btn" class="close-btn">✕</button>
+            <h2 class="settings-title">⚙️ Settings</h2>
+
+            <div class="settings-section">
+                <div class="setting-item">
+                    <label for="sfx-volume">🔊 Sound Effects</label>
+                    <input type="range" id="sfx-volume" min="0" max="100" value="50" class="volume-slider">
+                    <span id="sfx-value">50%</span>
+                </div>
+
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="sound-toggle" checked>
+                        Enable Sounds
+                    </label>
+                </div>
+
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="particles-toggle" checked>
+                        Enable Particle Effects
+                    </label>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="game.js"></script>
