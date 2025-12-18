@@ -3159,15 +3159,11 @@ function init() {
         });
     });
 
-    // Quick Action Buttons (new system)
-    const quickShopBtn = document.getElementById('quick-shop-btn');
-    if (quickShopBtn) quickShopBtn.onclick = openShop;
+    // Shop button in info bar
+    const shopBtn = document.getElementById('shop-btn');
+    if (shopBtn) shopBtn.onclick = openShop;
 
-    const quickWheelBtn = document.getElementById('quick-wheel-btn');
-    if (quickWheelBtn) quickWheelBtn.onclick = spinWheel;
 
-    const quickFlipBtn = document.getElementById('quick-flip-btn');
-    if (quickFlipBtn) quickFlipBtn.onclick = flipCoin;
 
     // Shop modal
     const closeShopBtn = document.getElementById('close-shop-btn');
