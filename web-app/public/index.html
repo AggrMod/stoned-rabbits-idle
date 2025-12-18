@@ -5,6 +5,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Stoned Rabbits: Idle Empire</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description"
+        content="Build your Magic Dust empire with cute stoned rabbits! An idle/incremental game featuring NFT integration with the Stonned Rabitts collection.">
+    <meta name="keywords" content="idle game, incremental game, stoned rabbits, NFT game, magic dust, web game">
+    <meta name="author" content="Stoned Rabbits Team">
+
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://stoned-rabbits-game.web.app/">
+    <meta property="og:title" content="Stoned Rabbits: Idle Empire">
+    <meta property="og:description"
+        content="Build your Magic Dust empire with cute stoned rabbits! An idle/incremental game featuring NFT integration.">
+    <meta property="og:image" content="https://stoned-rabbits-game.web.app/rabbit-captain.jpg">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Stoned Rabbits: Idle Empire">
+    <meta name="twitter:description" content="Build your Magic Dust empire with cute stoned rabbits!">
+    <meta name="twitter:image" content="https://stoned-rabbits-game.web.app/rabbit-captain.jpg">
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#f1c40f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Stoned Rabbits">
+    <link rel="apple-touch-icon" href="rabbit-captain.jpg">
+    <link rel="manifest" href="manifest.json">
+
     <link rel="stylesheet" href="styles.css">
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐰</text></svg>">
@@ -373,9 +402,185 @@
                         Enable Particle Effects
                     </label>
                 </div>
+                =======
+                <!-- Prestige Modal -->
+                <div id="prestige-modal" class="modal hidden">
+                    <div class="modal-content prestige-theme"
+                        style="border: 2px solid var(--accent-gold); box-shadow: 0 0 20px rgba(241, 196, 15, 0.3);">
+                        <button id="close-prestige-btn" class="close-btn">×</button>
+                        <img src="prestige-portal.png"
+                            style="width: 120px; display: block; margin: 0 auto 10px; filter: drop-shadow(0 0 10px rgba(241, 196, 15, 0.5)); transition: transform 2s infinite ease-in-out;">
+                        <h2 style="color: var(--accent-gold); text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);">🌌 Ascend
+                            the
+                            Burrow</h2>
+
+                        <div class="prestige-stats" style="margin: 20px 0;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <span>Current Burrow Tokens:</span>
+                                <span id="current-tokens" style="color: var(--accent-gold); font-weight: bold;">0</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                                <span>Lifetime Dust:</span>
+                                <span id="lifetime-dust" style="color: #9b59b6; font-weight: bold;">0</span>
+                            </div>
+
+                            <hr style="border-color: #444; margin-bottom: 20px;">
+
+                            <div class="reward-section"
+                                style="text-align: center; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px;">
+                                <p style="margin: 0; color: #aaa;">Ascend now to earn:</p>
+                                <div id="prestige-reward"
+                                    style="font-size: 2.5rem; font-weight: bold; color: var(--accent-gold); margin: 10px 0;">
+                                    +0
+                                    Tokens</div>
+                                <p style="margin: 0; font-size: 0.8rem; color: #666;">(Next token at <span
+                                        id="next-token-goal">10B</span> Lifetime Dust)</p>
+                            </div>
+
+                            <div style="margin-top: 20px; text-align: center;">
+                                <span style="color: #aaa;">New Production Multiplier:</span>
+                                <span id="new-multiplier"
+                                    style="color: var(--accent-green); font-weight: bold; margin-left: 5px;">1x</span>
+                            </div>
+                        </div>
+
+                        <button id="do-prestige-btn" class="game-btn"
+                            style="width: 100%; background: linear-gradient(135deg, #f1c40f, #d35400); font-weight: bold; font-size: 1.2rem; margin-top: 10px;"
+                            disabled>ASCEND</button>
+                        <div style="text-align: center; margin-top: 10px; font-size: 0.8rem; color: #e74c3c;">
+                            ⚠️ Resets Buildings, Upgrades & Current Dust.<br>
+                            ✅ Keeps Rabbits, Tokens & Achievements.
+                        </div>
+
+                        <hr style="border-color: #333; margin: 20px 0 15px 0;">
+
+                        <!-- Talent Tree Section -->
+                        <div style="margin-bottom: 20px;">
+                            <h3 style="color: var(--accent-gold); text-align: center; margin-bottom: 10px;">🌿 Talent
+                                Tree</h3>
+                            <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+                                <span style="color: #2ecc71;">Available Tokens: <span id="available-tokens"
+                                        style="font-weight: bold;">0</span></span>
+                            </div>
+                            <div id="talent-tree-container" style="max-height: 300px; overflow-y: auto;">
+                                <!-- Talents rendered by JS -->
+                            </div>
+                        </div>
+
+                        <hr style="border-color: #333; margin: 20px 0 15px 0;">
+                        <button id="reset-ascend-btn" class="reset-btn" style="width: 100%;">Reset Ascend
+                            Progress</button>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <!-- Bottom Tab Navigation -->
+                <nav id="bottom-tabs"
+                    style="position: fixed; bottom: 0; left: 0; width: 100%; background: var(--bg-card); border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; box-shadow: 0 -5px 20px rgba(0,0,0,0.5);">
+                    <button class="nav-tab" onclick="window.scrollTo({top:0, behavior:'smooth'})"
+                        style="background:none; border:none; color: var(--accent-gold); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;">
+                        <img src="rabbit-boss.png"
+                            style="width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--accent-gold); object-fit: cover; margin-bottom: 2px;">
+                        <span style="font-size: 0.7rem; font-weight: bold;">Empire</span>
+                    </button>
+                    <button class="nav-tab" onclick="document.getElementById('rabbits-btn').click()"
+                        style="background:none; border:none; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;">
+                        <span style="font-size: 1.5rem;">🐰</span>
+                        <span style="font-size: 0.7rem;">Rabbits</span>
+                    </button>
+                    <button class="nav-tab" onclick="document.getElementById('minigames-btn').click()"
+                        style="background:none; border:none; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;">
+                        <span style="font-size: 1.5rem;">🎰</span>
+                        <span style="font-size: 0.7rem;">Games</span>
+                    </button>
+                    <button class="nav-tab" onclick="document.getElementById('prestige-btn').click()"
+                        style="background:none; border:none; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;">
+                        <span style="font-size: 1.5rem;">🌌</span>
+                        <span style="font-size: 0.7rem;">Ascend</span>
+                    </button>
+                </nav>
+
+                <div style="height: 80px;"></div>
+
+                <footer id="footer" style="padding-bottom: 90px; text-align: center; color: #666; font-size: 0.8rem;">
+                    <!-- Hidden Logic Buttons (Preserved for Binding) -->
+                    <div style="display:none;">
+                        <button id="rabbits-btn"></button>
+                        <button id="minigames-btn"></button>
+                        <button id="prestige-btn"></button>
+                    </div>
+
+                    <!-- Cloud Save UI -->
+                    <div id="cloud-save-bar"
+                        style="margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                            <span id="cloud-status" title="Cloud Save Status" style="font-size: 1.2rem;">☁️</span>
+                            <span id="cloud-user" style="color: #888; font-size: 0.85rem;">Not signed in</span>
+                            <button id="cloud-signin-btn" onclick="cloudSignIn()" class="game-btn"
+                                style="padding: 5px 12px; font-size: 0.75rem; background: #4285f4;">Sign In</button>
+                            <button id="cloud-signout-btn" onclick="cloudSignOut()" class="game-btn hidden"
+                                style="padding: 5px 12px; font-size: 0.75rem; background: #666;">Sign Out</button>
+                            <button id="cloud-sync-btn" onclick="uploadSave()" class="game-btn hidden"
+                                style="padding: 5px 12px; font-size: 0.75rem; background: #2ecc71;">Sync</button>
+                        </div>
+                    </div>
+
+                    <div id="stats" style="margin-bottom: 10px;">
+                        <span>Total: <span id="total-earned">0</span></span> |
+                        <span>Prestiges: <span id="prestige-count">0</span></span>
+                    </div>
+
+                    <button id="reset-btn" class="reset-btn" style="padding: 5px 10px; font-size: 0.7rem;">Hard
+                        Reset</button>
+                    <div id="version">v1.0.0 - Launch Release</div>
+                </footer>
             </div>
-        </div>
-    </div>
+
+            <!-- NFT Crate Modal -->
+            <div id="crate-modal" class="modal hidden">
+                <div class="modal-content crate-modal-content">
+                    <div class="crate-box">
+                        <div class="crate-lid"></div>
+                        <div class="crate-body"></div>
+                    </div>
+                    <div id="crate-result"></div>
+                </div>
+            </div>
+
+            <!-- Cloud Save Conflict Modal -->
+            <div id="cloud-conflict-modal" class="modal hidden">
+                <div class="modal-content" style="max-width: 350px;">
+                    <h2 style="color: var(--accent-gold);">Cloud Save Found!</h2>
+                    <p style="color: #aaa; margin-bottom: 15px;">Which save would you like to use?</p>
+
+                    <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                        <div
+                            style="flex: 1; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem;">☁️</div>
+                            <div style="font-weight: bold; color: #3498db;">Cloud Save</div>
+                            <div style="font-size: 0.8rem; color: #888;" id="cloud-save-time">--</div>
+                            <div style="font-size: 1.2rem; color: var(--accent-gold);" id="cloud-save-dust">0</div>
+                        </div>
+                        <div
+                            style="flex: 1; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.5rem;">📱</div>
+                            <div style="font-weight: bold; color: #2ecc71;">Local Save</div>
+                            <div style="font-size: 0.8rem; color: #888;" id="local-save-time">--</div>
+                            <div style="font-size: 1.2rem; color: var(--accent-gold);" id="local-save-dust">0</div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="useCloudSave()" class="game-btn" style="flex: 1; background: #3498db;">Use
+                            Cloud</button>
+                        <button onclick="useLocalSave()" class="game-btn" style="flex: 1; background: #2ecc71;">Use
+                            Local</button>
+
+                    </div>
+                </div>
+            </div>
+
+
 
     <script src="game.js"></script>
 </body>

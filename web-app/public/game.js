@@ -3,9 +3,9 @@
  * Core idle game loop with save/load and offline progression
  */
 
-// ============================================
+// ==
 // BIG NUMBER UTILITY
-// ============================================
+// ==
 class BigNumber {
     constructor(value = 0) {
         this.value = typeof value === 'number' ? value : parseFloat(value) || 0;
@@ -54,9 +54,58 @@ class BigNumber {
     }
 }
 
-// ============================================
+// ==
 // DATA DEFINITIONS
-// ============================================
+// ==
+
+// TALENT TREE DEFINITIONS
+const TALENT_TREE = {
+    // Production Talents
+    dustMaster: {
+        id: 'dustMaster', name: 'Dust Master', maxLevel: 5, cost: 1,
+        description: '+5% production per level',
+        effect: (level) => 1 + (level * 0.05)
+    },
+    goldenCarrot: {
+        id: 'goldenCarrot', name: 'Golden Carrot', maxLevel: 3, cost: 2,
+        description: '+10% offline earnings per level',
+        effect: (level) => 1 + (level * 0.10)
+    },
+    luckyClover: {
+        id: 'luckyClover', name: 'Lucky Clover', maxLevel: 3, cost: 2,
+        description: '+5% mini-game rewards per level',
+        effect: (level) => 1 + (level * 0.05)
+    },
+    // Speed Talents
+    speedyPaws: {
+        id: 'speedyPaws', name: 'Speedy Paws', maxLevel: 5, cost: 1,
+        description: '-10% cooldown time per level',
+        effect: (level) => 1 - (level * 0.10)
+    },
+    expeditionExpert: {
+        id: 'expeditionExpert', name: 'Expedition Expert', maxLevel: 3, cost: 2,
+        description: '+15% expedition rewards per level',
+        effect: (level) => 1 + (level * 0.15)
+    },
+    // Rabbit Talents
+    rabbitWhisperer: {
+        id: 'rabbitWhisperer', name: 'Rabbit Whisperer', maxLevel: 3, cost: 3,
+        description: '+0.1 rabbit multiplier bonus per level',
+        effect: (level) => level * 0.1
+    },
+    crateHunter: {
+        id: 'crateHunter', name: 'Crate Hunter', maxLevel: 3, cost: 2,
+        description: '+2% rare drop chance per level',
+        effect: (level) => level * 0.02
+    },
+    // Battle Talents
+    battleHardened: {
+        id: 'battleHardened', name: 'Battle Hardened', maxLevel: 3, cost: 2,
+        description: '+10% rumble win chance per level',
+        effect: (level) => level * 0.10
+    }
+};
+
 const RABBIT_DATA = {
     rarities: {
         common: { name: 'Common', multiplier: 1.00, color: '#888888' },
@@ -74,9 +123,9 @@ const RABBIT_DATA = {
     ]
 };
 
-// ============================================
+// ==
 // GAME STATE
-// ============================================
+// ==
 const GameState = {
     magicDust: new BigNumber(0),
     totalEarned: new BigNumber(0),
@@ -95,9 +144,15 @@ const GameState = {
     lastSaveTime: Date.now(),
     lastSpinTime: 0, // Timestamp of last spin
     lastFlipTime: 0, // Timestamp of last coin flip
+    lastRumbleTime: 0, // Timestamp of last rumble battle
+    expeditionStartTime: 0, // When expedition started (0 = not on expedition)
+    expeditionDuration: 0, // Duration in ms
+    expeditionRabbitId: null, // Rabbit sent on expedition
     activeBoosts: [], // Array of { id, multiplier, endTime }
     rabbits: [],      // Array of { id, typeId, rarity, level }
     assignedRabbits: {}, // { buildingId: rabbitId }
+    talents: {}, // { talentId: level }
+    spentTokens: 0, // Tokens spent on talents
 
     buildings: [
         {
@@ -159,13 +214,146 @@ const GameState = {
             accumulatedDust: 0,
             unlocked: false,
             unlockRequirement: { buildingId: 'infused-field', level: 20 }
+        },
+        // === TIER 2 BUILDINGS ===
+        {
+            id: 'crystal-cavern',
+            name: 'Crystal Cavern',
+            level: 0,
+            baseCost: 25000000,
+            baseProduction: 15000,
+            costGrowthFactor: 1.14,
+            productionGrowthFactor: 1.20,
+            accumulatedDust: 0,
+            unlocked: false,
+            unlockRequirement: { buildingId: 'energy-extractor', level: 50 },
+            tier: 2,
+            special: 'gems',
+            gemRate: 0.001
+        },
+        {
+            id: 'rabbit-academy',
+            name: 'Rabbit Academy',
+            level: 0,
+            baseCost: 100000000,
+            baseProduction: 50000,
+            costGrowthFactor: 1.15,
+            productionGrowthFactor: 1.22,
+            accumulatedDust: 0,
+            unlocked: false,
+            unlockRequirement: { buildingId: 'crystal-cavern', level: 60 },
+            tier: 2,
+            special: 'xp',
+            xpRate: 0.1
+        },
+        {
+            id: 'time-warp-tower',
+            name: 'Time Warp Tower',
+            level: 0,
+            baseCost: 500000000,
+            baseProduction: 200000,
+            costGrowthFactor: 1.16,
+            productionGrowthFactor: 1.24,
+            accumulatedDust: 0,
+            unlocked: false,
+            unlockRequirement: { buildingId: 'rabbit-academy', level: 75 },
+            tier: 2,
+            special: 'offline',
+            offlineBonus: 0.05
+        },
+        {
+            id: 'mystic-garden',
+            name: 'Mystic Garden',
+            level: 0,
+            baseCost: 2500000000,
+            baseProduction: 1000000,
+            costGrowthFactor: 1.18,
+            productionGrowthFactor: 1.26,
+            accumulatedDust: 0,
+            unlocked: false,
+            unlockRequirement: { buildingId: 'time-warp-tower', level: 100 },
+            tier: 2,
+            special: 'ingredients',
+            dropChance: 0.001
+        },
+        // === TIER 3 BUILDINGS (Endgame) ===
+        {
+            id: 'dimensional-portal',
+            name: 'Dimensional Portal',
+            level: 0,
+            baseCost: 50000000000,
+            baseProduction: 10000000,
+            costGrowthFactor: 1.20,
+            productionGrowthFactor: 1.28,
+            accumulatedDust: 0,
+            unlocked: false,
+            unlockRequirement: { buildingId: 'mystic-garden', level: 150 },
+            tier: 3,
+            special: 'worlds',
+            worldBonus: 0.25 // +25% all production per world unlocked
+        },
+        {
+            id: 'legendary-forge',
+            name: 'Legendary Forge',
+            level: 0,
+            baseCost: 500000000000,
+            baseProduction: 100000000,
+            costGrowthFactor: 1.22,
+            productionGrowthFactor: 1.30,
+            accumulatedDust: 0,
+            unlocked: false,
+            unlockRequirement: { buildingId: 'dimensional-portal', level: 200 },
+            tier: 3,
+            special: 'crafting',
+            craftChance: 0.0001 // Chance to auto-craft legendary rabbit
+        },
+        {
+            id: 'burrow-bank',
+            name: 'Burrow Bank',
+            level: 0,
+            baseCost: 5000000000000,
+            baseProduction: 1000000000,
+            costGrowthFactor: 1.24,
+            productionGrowthFactor: 1.32,
+            accumulatedDust: 0,
+            unlocked: false,
+            unlockRequirement: { buildingId: 'legendary-forge', level: 250 },
+            tier: 3,
+            special: 'staking',
+            interestRate: 0.001 // +0.1% token interest per level per hour
+        },
+        {
+            id: 'infinity-engine',
+            name: 'Infinity Engine',
+            level: 0,
+            baseCost: 100000000000000,
+            baseProduction: 50000000000,
+            costGrowthFactor: 1.25,
+            productionGrowthFactor: 1.35,
+            accumulatedDust: 0,
+            unlocked: false,
+            unlockRequirement: { buildingId: 'burrow-bank', level: 300 },
+            tier: 3,
+            special: 'infinity',
+            infinityMultiplier: 0.01 // +1% multiplicative bonus per level
         }
-    ]
+    ],
+
+    // Tier 2 currencies
+    gems: 0,
+    rabbitXP: 0,
+    ingredients: [],
+
+    // Tier 3 currencies/progress
+    worldsUnlocked: 0,
+    legendaryRabbitsCrafted: 0,
+    stakedTokens: 0,
+    infinityLevel: 0
 };
 
-// ============================================
+// ==
 // AUDIO MANAGER
-// ============================================
+// ==
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 let audioCtx = null;
 
@@ -242,9 +430,9 @@ function playSound(type) {
     }
 }
 
-// ============================================
+// ==
 // GAME CALCULATIONS
-// ============================================
+// ==
 function getUpgradeCost(building) {
     return new BigNumber(building.baseCost * Math.pow(building.costGrowthFactor, building.level));
 }
@@ -258,6 +446,12 @@ function getGlobalMultiplier() {
     // Burrow Token bonus: +10% per token (Directive 5.4)
     const tokenBonus = 1 + (GameState.burrowTokens * 0.10);
     multiplier *= tokenBonus;
+
+    // Dust Master talent bonus
+    const dustMasterLevel = GameState.talents['dustMaster'] || 0;
+    if (dustMasterLevel > 0) {
+        multiplier *= TALENT_TREE.dustMaster.effect(dustMasterLevel);
+    }
 
     return multiplier;
 }
@@ -301,7 +495,11 @@ function getProductionRate(building) {
         }
     }
 
-    return new BigNumber(base * globalMult * milestoneMult * rabbitMult);
+    // Tier 3 bonuses (endgame)
+    const worldMult = typeof getWorldBonus === 'function' ? getWorldBonus() : 1;
+    const infinityMult = typeof getInfinityMultiplier === 'function' ? getInfinityMultiplier() : 1;
+
+    return new BigNumber(base * globalMult * milestoneMult * rabbitMult * worldMult * infinityMult);
 }
 
 function canAffordUpgrade(building) {
@@ -314,9 +512,9 @@ function calculatePrestigeReward() {
     return Math.floor(Math.log10(lifetime));
 }
 
-// ============================================
+// ==
 // GAME ACTIONS
-// ============================================
+// ==
 function collectDust(buildingIndex) {
     // Handle specific building or default to first (Rabbit Farm)
     const index = typeof buildingIndex === 'number' ? buildingIndex : 0;
@@ -397,9 +595,9 @@ function produceDust() {
     updateUI();
 }
 
-// ============================================
+// ==
 // SAVE / LOAD
-// ============================================
+// ==
 const SAVE_KEY = 'stonedRabbits_saveData';
 
 function saveGame() {
@@ -413,9 +611,25 @@ function saveGame() {
         buildings: GameState.buildings,
         lastSpinTime: GameState.lastSpinTime,
         lastFlipTime: GameState.lastFlipTime,
+        lastRumbleTime: GameState.lastRumbleTime,
+        expeditionStartTime: GameState.expeditionStartTime,
+        expeditionDuration: GameState.expeditionDuration,
+        expeditionRabbitId: GameState.expeditionRabbitId,
         activeBoosts: GameState.activeBoosts,
         rabbits: GameState.rabbits,
         assignedRabbits: GameState.assignedRabbits,
+        talents: GameState.talents,
+        spentTokens: GameState.spentTokens,
+        // Tier 2 currencies
+        gems: GameState.gems || 0,
+        rabbitXP: GameState.rabbitXP || 0,
+        ingredients: GameState.ingredients || [],
+        // Tier 3 currencies
+        worldsUnlocked: GameState.worldsUnlocked || 0,
+        legendaryRabbitsCrafted: GameState.legendaryRabbitsCrafted || 0,
+        stakedTokens: GameState.stakedTokens || 0,
+        infinityLevel: GameState.infinityLevel || 0,
+        craftingXP: GameState.craftingXP || 0,
         lastSaveTime: Date.now()
     };
 
@@ -444,9 +658,27 @@ function loadGame() {
         GameState.prestigeCount = data.prestigeCount || 0;
         GameState.lastSpinTime = data.lastSpinTime || 0;
         GameState.lastFlipTime = data.lastFlipTime || 0;
+        GameState.lastRumbleTime = data.lastRumbleTime || 0;
+        GameState.expeditionStartTime = data.expeditionStartTime || 0;
+        GameState.expeditionDuration = data.expeditionDuration || 0;
+        GameState.expeditionRabbitId = data.expeditionRabbitId || null;
         GameState.activeBoosts = data.activeBoosts || [];
         GameState.rabbits = data.rabbits || [];
         GameState.assignedRabbits = data.assignedRabbits || {};
+        GameState.talents = data.talents || {};
+        GameState.spentTokens = data.spentTokens || 0;
+
+        // Tier 2 currencies
+        GameState.gems = data.gems || 0;
+        GameState.rabbitXP = data.rabbitXP || 0;
+        GameState.ingredients = data.ingredients || [];
+
+        // Tier 3 currencies
+        GameState.worldsUnlocked = data.worldsUnlocked || 0;
+        GameState.legendaryRabbitsCrafted = data.legendaryRabbitsCrafted || 0;
+        GameState.stakedTokens = data.stakedTokens || 0;
+        GameState.infinityLevel = data.infinityLevel || 0;
+        GameState.craftingXP = data.craftingXP || 0;
 
         // Handle migration from single building object to array
         if (data.buildings) {
@@ -505,11 +737,14 @@ function calculateOfflineProgress() {
             }
         });
 
-        const offlineEarnings = totalRate * cappedSeconds;
+        // Apply Time Warp Tower bonus (if available)
+        const timeWarpBonus = typeof getTimeWarpBonus === 'function' ? getTimeWarpBonus() : 1;
+        const offlineEarnings = totalRate * cappedSeconds * timeWarpBonus;
 
         return {
             seconds: cappedSeconds,
-            earnings: offlineEarnings
+            earnings: offlineEarnings,
+            timeWarpBonus: timeWarpBonus
         };
     }
 
@@ -575,11 +810,11 @@ function resetAscendProgress() {
     showNumberPop('Ascend Reset!');
 }
 
-// ============================================
+// ==
 // UI UPDATES
-// ============================================
+// ==
 function checkUnlocks() {
-    GameState.buildings.forEach((building, index) => {
+    GameState.buildings.slice(0, 5).forEach((building, index) => {
         if (!building.unlocked && building.unlockRequirement) {
             const req = building.unlockRequirement;
             // Find requirement building
@@ -602,7 +837,7 @@ function renderBuildings() {
     }
     container.innerHTML = '';
 
-    GameState.buildings.forEach((building, index) => {
+    GameState.buildings.slice(0, 5).forEach((building, index) => {
         const div = document.createElement('div');
         div.className = `building ${building.unlocked ? '' : 'locked'}`;
         div.id = `building-${index}`;
@@ -732,7 +967,7 @@ function updateUI() {
     renderGrasslandScene();
 
     // Update each building (old system - for backward compat)
-    GameState.buildings.forEach((building, index) => {
+    GameState.buildings.slice(0, 5).forEach((building, index) => {
         if (building.unlocked) {
             const levelEl = document.getElementById(`level-${index}`);
             // If element missing (e.g. just unlocked but not re-rendered), safe fail
@@ -812,9 +1047,9 @@ function updateUI() {
     }
 }
 
-// ============================================
+// ==
 // VISUAL EFFECTS
-// ============================================
+// ==
 function spawnDustParticle() {
     const particle = document.createElement('div');
     particle.className = 'dust-particle';
@@ -895,9 +1130,9 @@ function checkBoosts() {
     }
 }
 
-// ============================================
+// ==
 // PRESTIGE & ASCENSION (Story 5.2, 5.3)
-// ============================================
+// ==
 function showPrestigeModal() {
     updatePrestigeModal();
     document.getElementById('prestige-modal').classList.remove('hidden');
@@ -952,6 +1187,13 @@ function updatePrestigeModal() {
     }
 
     document.getElementById('next-token-goal').textContent = nextGoal.format();
+
+    // Update available tokens display for talent tree
+    const availableEl = document.getElementById('available-tokens');
+    if (availableEl) availableEl.textContent = getAvailableTokens();
+
+    // Render talent tree
+    renderTalentTree();
 }
 
 function performPrestige() {
@@ -1004,9 +1246,108 @@ function performPrestige() {
     }, 2000);
 }
 
-// ============================================
+// ==
+// TALENT TREE
+// ==
+function getTalentLevel(talentId) {
+    return GameState.talents[talentId] || 0;
+}
+
+function getTalentEffect(talentId) {
+    const talent = TALENT_TREE[talentId];
+    const level = getTalentLevel(talentId);
+    return talent ? talent.effect(level) : 0;
+}
+
+function getAvailableTokens() {
+    return GameState.burrowTokens - GameState.spentTokens;
+}
+
+function canAffordTalent(talentId) {
+    const talent = TALENT_TREE[talentId];
+    const currentLevel = getTalentLevel(talentId);
+    if (currentLevel >= talent.maxLevel) return false;
+    return getAvailableTokens() >= talent.cost;
+}
+
+function upgradeTalent(talentId) {
+    const talent = TALENT_TREE[talentId];
+    if (!talent) return;
+
+    const currentLevel = getTalentLevel(talentId);
+    if (currentLevel >= talent.maxLevel) {
+        showNumberPop('Max level!');
+        return;
+    }
+
+    if (getAvailableTokens() < talent.cost) {
+        showNumberPop('Not enough tokens!');
+        return;
+    }
+
+    // Spend tokens and upgrade
+    GameState.spentTokens += talent.cost;
+    GameState.talents[talentId] = currentLevel + 1;
+
+    saveGame();
+    renderTalentTree();
+    updatePrestigeModal();
+    showNumberPop(`${talent.name} upgraded!`);
+}
+
+function renderTalentTree() {
+    const container = document.getElementById('talent-tree-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Create talent grid
+    Object.values(TALENT_TREE).forEach(talent => {
+        const level = getTalentLevel(talent.id);
+        const canAfford = canAffordTalent(talent.id);
+        const isMaxed = level >= talent.maxLevel;
+
+        const card = document.createElement('div');
+        card.className = `talent-card ${isMaxed ? 'maxed' : ''} ${canAfford ? 'affordable' : ''}`;
+        card.style.cssText = `
+            background: rgba(0,0,0,0.4);
+            border: 2px solid ${isMaxed ? '#f1c40f' : canAfford ? '#2ecc71' : '#444'};
+            border-radius: 10px;
+            padding: 10px;
+            margin: 5px;
+            display: inline-block;
+            width: calc(50% - 20px);
+            text-align: center;
+            cursor: ${isMaxed ? 'default' : 'pointer'};
+            transition: all 0.2s;
+        `;
+
+        card.innerHTML = `
+            <div style="font-weight: bold; color: ${isMaxed ? '#f1c40f' : '#fff'};">${talent.name}</div>
+            <div style="font-size: 0.8rem; color: #888; margin: 5px 0;">${talent.description}</div>
+            <div style="font-size: 1rem; color: #f1c40f;">
+                Level ${level}/${talent.maxLevel}
+            </div>
+            ${!isMaxed ? `<div style="font-size: 0.75rem; color: ${canAfford ? '#2ecc71' : '#e74c3c'}; margin-top: 5px;">Cost: ${talent.cost} Token${talent.cost > 1 ? 's' : ''}</div>` : '<div style="font-size: 0.75rem; color: #f1c40f; margin-top: 5px;">MAXED!</div>'}
+        `;
+
+        if (!isMaxed) {
+            card.onclick = () => upgradeTalent(talent.id);
+            card.onmouseenter = () => card.style.transform = 'scale(1.02)';
+            card.onmouseleave = () => card.style.transform = 'scale(1)';
+        }
+
+        container.appendChild(card);
+    });
+
+    // Update available tokens display
+    const availableEl = document.getElementById('available-tokens');
+    if (availableEl) availableEl.textContent = getAvailableTokens();
+}
+
+// ==
 // MINI-GAMES
-// ============================================
+// ==
 const WHEEL_COOLDOWN = 4 * 60 * 60 * 1000; // 4 hours
 const FLIP_COOLDOWN = 1 * 60 * 60 * 1000; // 1 hour
 
@@ -1234,9 +1575,265 @@ function checkFlipCooldown() {
     }
 }
 
-// ============================================
+// ==
+// RUMBLE BATTLES & EXPEDITIONS
+// ==
+const RUMBLE_COOLDOWN = 2 * 60 * 60 * 1000; // 2 hours
+const EXPEDITION_DURATIONS = [
+    { name: 'Quick Scout', duration: 30 * 60 * 1000, multiplier: 1 },      // 30 min
+    { name: 'Forest Trek', duration: 2 * 60 * 60 * 1000, multiplier: 3 },  // 2 hours
+    { name: 'Mountain Quest', duration: 8 * 60 * 60 * 1000, multiplier: 10 } // 8 hours
+];
+
+function startRumble() {
+    const now = Date.now();
+    if (now - GameState.lastRumbleTime < RUMBLE_COOLDOWN) return;
+
+    // Need at least one rabbit
+    if (GameState.rabbits.length === 0) {
+        showNumberPop('Need a rabbit!');
+        return;
+    }
+
+    // Pick best rabbit for battle (highest rarity)
+    const sortedRabbits = [...GameState.rabbits].sort((a, b) => {
+        return RABBIT_DATA.rarities[b.rarity].multiplier - RABBIT_DATA.rarities[a.rarity].multiplier;
+    });
+    const battleRabbit = sortedRabbits[0];
+    const rabbitMult = RABBIT_DATA.rarities[battleRabbit.rarity].multiplier;
+
+    // Battle outcome - higher rarity = higher win chance
+    const winChance = 0.4 + (rabbitMult - 1) * 0.3; // 40% base + 30% per 1.0 mult
+    const won = Math.random() < winChance;
+
+    // Calculate reward based on production
+    let totalRate = new BigNumber(0);
+    GameState.buildings.forEach(b => {
+        if (b.unlocked) totalRate = totalRate.add(getProductionRate(b));
+    });
+    const prodPerMin = totalRate.multiply(60);
+
+    let resultText = '';
+    let color = '';
+
+    if (won) {
+        // Win: 10-30 mins of production based on rarity
+        const bonusMins = 10 + Math.floor(rabbitMult * 15);
+        const reward = prodPerMin.multiply(bonusMins);
+        GameState.magicDust = GameState.magicDust.add(reward);
+        GameState.totalEarned = GameState.totalEarned.add(reward);
+        GameState.lifetimeDust = GameState.lifetimeDust.add(reward);
+        resultText = `WIN! +${reward.format()} Dust`;
+        color = '#2ecc71';
+        showNumberPop('Battle Won! ⚔️');
+    } else {
+        // Lose: Small consolation prize (3 mins)
+        const consolation = prodPerMin.multiply(3);
+        GameState.magicDust = GameState.magicDust.add(consolation);
+        GameState.totalEarned = GameState.totalEarned.add(consolation);
+        GameState.lifetimeDust = GameState.lifetimeDust.add(consolation);
+        resultText = `Lost... +${consolation.format()}`;
+        color = '#e74c3c';
+        showNumberPop('Battle Lost 😢');
+    }
+
+    // Show result
+    const resultEl = document.getElementById('rumble-result');
+    if (resultEl) {
+        resultEl.textContent = resultText;
+        resultEl.style.color = color;
+        resultEl.classList.remove('hidden');
+        setTimeout(() => resultEl.classList.add('hidden'), 3000);
+    }
+
+    GameState.lastRumbleTime = now;
+    saveGame();
+    updateUI();
+    checkRumbleCooldown();
+}
+
+function checkRumbleCooldown() {
+    const now = Date.now();
+    const diff = now - GameState.lastRumbleTime;
+
+    const btn = document.getElementById('rumble-btn');
+    const card = document.getElementById('rumble-card');
+    const iconTimer = document.getElementById('rumble-icon-timer');
+    const readyDot = document.getElementById('rumble-ready-dot');
+
+    if (diff < RUMBLE_COOLDOWN) {
+        if (btn) btn.disabled = true;
+        if (btn) btn.classList.add('disabled');
+
+        const remaining = RUMBLE_COOLDOWN - diff;
+        const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((remaining / (1000 * 60)) % 60);
+        const seconds = Math.floor((remaining / 1000) % 60);
+        const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+        if (card) card.classList.remove('ready');
+        if (iconTimer) iconTimer.textContent = timeStr;
+        if (iconTimer) iconTimer.classList.remove('ready-text');
+        if (readyDot) readyDot.classList.add('hidden');
+    } else {
+        if (btn) btn.disabled = false;
+        if (btn) btn.classList.remove('disabled');
+        if (card) card.classList.add('ready');
+        if (iconTimer) iconTimer.textContent = 'READY!';
+        if (iconTimer) iconTimer.classList.add('ready-text');
+        if (readyDot) readyDot.classList.remove('hidden');
+    }
+}
+
+function startExpedition() {
+    // Check if already on expedition
+    if (GameState.expeditionStartTime > 0) {
+        // Check if expedition is complete
+        const elapsed = Date.now() - GameState.expeditionStartTime;
+        if (elapsed >= GameState.expeditionDuration) {
+            claimExpedition();
+        } else {
+            showNumberPop('Already exploring!');
+        }
+        return;
+    }
+
+    // Need at least one rabbit
+    if (GameState.rabbits.length === 0) {
+        showNumberPop('Need a rabbit!');
+        return;
+    }
+
+    // For simplicity, auto-select the Quick Scout (30 min)
+    // In a full version, you'd show a modal to pick duration
+    const expedition = EXPEDITION_DURATIONS[0]; // Quick Scout
+
+    // Pick a random rabbit to send
+    const availableRabbits = GameState.rabbits.filter(r => {
+        // Not assigned to a building
+        return !Object.values(GameState.assignedRabbits).includes(r.id);
+    });
+
+    if (availableRabbits.length === 0) {
+        showNumberPop('All rabbits assigned!');
+        return;
+    }
+
+    const expeditionRabbit = availableRabbits[0];
+
+    GameState.expeditionStartTime = Date.now();
+    GameState.expeditionDuration = expedition.duration;
+    GameState.expeditionRabbitId = expeditionRabbit.id;
+
+    saveGame();
+    checkExpeditionStatus();
+    showNumberPop(`${expedition.name} started! 🗺️`);
+}
+
+function claimExpedition() {
+    if (GameState.expeditionStartTime === 0) return;
+
+    const elapsed = Date.now() - GameState.expeditionStartTime;
+    if (elapsed < GameState.expeditionDuration) {
+        showNumberPop('Not ready yet!');
+        return;
+    }
+
+    // Find expedition info
+    const expedition = EXPEDITION_DURATIONS.find(e => e.duration === GameState.expeditionDuration) || EXPEDITION_DURATIONS[0];
+    const rabbit = GameState.rabbits.find(r => r.id === GameState.expeditionRabbitId);
+    const rabbitMult = rabbit ? RABBIT_DATA.rarities[rabbit.rarity].multiplier : 1;
+
+    // Calculate reward
+    let totalRate = new BigNumber(0);
+    GameState.buildings.forEach(b => {
+        if (b.unlocked) totalRate = totalRate.add(getProductionRate(b));
+    });
+    const prodPerMin = totalRate.multiply(60);
+
+    // Reward = production * expedition_multiplier * rabbit_rarity * random(0.8-1.2)
+    const randomMult = 0.8 + Math.random() * 0.4;
+    const durationMins = GameState.expeditionDuration / 60000;
+    const reward = prodPerMin.multiply(durationMins * expedition.multiplier * rabbitMult * randomMult);
+
+    GameState.magicDust = GameState.magicDust.add(reward);
+    GameState.totalEarned = GameState.totalEarned.add(reward);
+    GameState.lifetimeDust = GameState.lifetimeDust.add(reward);
+
+    // Small chance for bonus boost
+    if (Math.random() < 0.2) {
+        activateBoost('expedition_bonus', 2, 5); // 2x for 5 mins
+        showNumberPop(`+${reward.format()} + 2x Boost!`);
+    } else {
+        showNumberPop(`Expedition: +${reward.format()}!`);
+    }
+
+    // Reset expedition state
+    GameState.expeditionStartTime = 0;
+    GameState.expeditionDuration = 0;
+    GameState.expeditionRabbitId = null;
+
+    saveGame();
+    updateUI();
+    checkExpeditionStatus();
+}
+
+function checkExpeditionStatus() {
+    const btn = document.getElementById('expedition-btn');
+    const card = document.getElementById('expedition-card');
+    const iconTimer = document.getElementById('expedition-icon-timer');
+    const readyDot = document.getElementById('expedition-ready-dot');
+    const resultEl = document.getElementById('expedition-result');
+
+    if (GameState.expeditionStartTime === 0) {
+        // No active expedition - ready to start
+        if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('disabled');
+            btn.textContent = 'Send!';
+        }
+        if (card) card.classList.add('ready');
+        if (iconTimer) iconTimer.textContent = 'READY!';
+        if (iconTimer) iconTimer.classList.add('ready-text');
+        if (readyDot) readyDot.classList.remove('hidden');
+        if (resultEl) resultEl.classList.add('hidden');
+    } else {
+        const elapsed = Date.now() - GameState.expeditionStartTime;
+        const remaining = GameState.expeditionDuration - elapsed;
+
+        if (remaining <= 0) {
+            // Expedition complete - ready to claim
+            if (btn) {
+                btn.disabled = false;
+                btn.classList.remove('disabled');
+                btn.textContent = 'Claim!';
+            }
+            if (card) card.classList.add('ready');
+            if (iconTimer) iconTimer.textContent = 'CLAIM!';
+            if (iconTimer) iconTimer.classList.add('ready-text');
+            if (readyDot) readyDot.classList.remove('hidden');
+        } else {
+            // Still exploring
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('disabled');
+                btn.textContent = 'Exploring...';
+            }
+            const mins = Math.floor(remaining / 60000);
+            const secs = Math.floor((remaining % 60000) / 1000);
+            const timeStr = `${mins}:${String(secs).padStart(2, '0')}`;
+
+            if (card) card.classList.remove('ready');
+            if (iconTimer) iconTimer.textContent = timeStr;
+            if (iconTimer) iconTimer.classList.remove('ready-text');
+            if (readyDot) readyDot.classList.add('hidden');
+        }
+    }
+}
+
+// ==
 // RABBIT MANAGER
-// ============================================
+// ==
 const CRATE_COST = 1000;
 const CRATE_DROP_RATES = {
     common: 60,
@@ -1275,14 +1872,23 @@ function renderRabbitCollection() {
             .find(([bid, rid]) => rid === rabbit.id);
         const isAssigned = !!assignedTo;
 
+        // Check if this is an NFT rabbit
+        const isNFT = rabbit.nftData && rabbit.nftData.image;
+        const rabbitName = isNFT ? rabbit.nftData.name : (typeData ? typeData.name : 'Unknown');
+        const rabbitImage = isNFT ? rabbit.nftData.image : 'rabbit-captain.jpg';
+        const rankDisplay = isNFT && rabbit.nftData.rank ? `Rank #${rabbit.nftData.rank}` : '';
+
         const card = document.createElement('div');
-        card.className = `rabbit-card ${isAssigned ? 'assigned' : ''}`;
+        card.className = `rabbit-card ${isAssigned ? 'assigned' : ''} ${isNFT ? 'nft-rabbit' : ''}`;
         card.style.borderColor = rarityData.color;
         card.innerHTML = `
-            <div class="rabbit-name">${typeData ? typeData.name : 'Unknown'}</div>
+            ${isNFT ? `<img src="${rabbitImage}" alt="${rabbitName}" class="rabbit-thumb" onerror="this.src='rabbit-captain.jpg'" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 2px solid ${rarityData.color}; margin-bottom: 5px;">` : ''}
+            <div class="rabbit-name" style="font-size: 0.85rem; font-weight: bold;">${rabbitName}</div>
+            ${rankDisplay ? `<div class="rabbit-rank" style="font-size: 0.7rem; color: #888;">${rankDisplay}</div>` : ''}
             <div class="rabbit-rarity" style="color: ${rarityData.color}">${rarityData.name}</div>
             <div class="rabbit-mult">×${rarityData.multiplier.toFixed(2)}</div>
-            <div class="rabbit-status">${isAssigned ? 'Assigned' : 'Available'}</div>
+            <div class="rabbit-status" style="font-size: 0.7rem; color: ${isAssigned ? '#2ecc71' : '#888'};">${isAssigned ? 'Assigned' : 'Available'}</div>
+            ${isNFT && rabbit.nftData.magicEdenUrl ? `<a href="${rabbit.nftData.magicEdenUrl}" target="_blank" style="font-size: 0.65rem; color: #e91e8c; text-decoration: none;">View on ME</a>` : ''}
             <button class="assign-btn" onclick="openAssignMenu('${rabbit.id}')" style="margin-top: 5px; padding: 5px 10px; font-size: 0.8rem; background: var(--bg-button); color: white; border: none; border-radius: 5px; cursor: pointer;">
                 ${isAssigned ? 'Reassign' : 'Assign'}
             </button>
@@ -1291,7 +1897,7 @@ function renderRabbitCollection() {
     });
 }
 
-function openCrate() {
+async function openCrate() {
     // Check cost
     if (GameState.magicDust.lessThan(CRATE_COST)) {
         showNumberPop('Not enough Dust!');
@@ -1300,38 +1906,65 @@ function openCrate() {
 
     // Deduct cost
     GameState.magicDust = GameState.magicDust.subtract(CRATE_COST);
-
-    // Determine rarity
-    const rand = Math.random() * 100;
-    let rarity = 'common';
-    let cumulative = 0;
-
-    for (const [rar, rate] of Object.entries(CRATE_DROP_RATES)) {
-        cumulative += rate;
-        if (rand < cumulative) {
-            rarity = rar;
-            break;
-        }
-    }
-
-    // Pick random type
-    const typeIndex = Math.floor(Math.random() * RABBIT_DATA.types.length);
-    const typeId = RABBIT_DATA.types[typeIndex].id;
-
-    // Create rabbit
-    const newRabbit = {
-        id: `rabbit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        typeId: typeId,
-        rarity: rarity,
-        level: 1
-    };
-
-    GameState.rabbits.push(newRabbit);
     saveGame();
     updateUI();
 
-    // Show result
-    showCrateResult(newRabbit);
+    // Use NFT API if available
+    if (window.NFT && window.NFT.openCrate) {
+        // NFT Crate System - Uses Magic Eden API
+        const nft = await window.NFT.openCrate();
+
+        if (nft) {
+            // Create game rabbit from NFT data
+            const newRabbit = {
+                id: nft.id || `rabbit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                typeId: 'nft-rabbit',
+                rarity: nft.rarity.key,
+                level: 1,
+                nftData: {
+                    name: nft.name,
+                    image: nft.image,
+                    rank: nft.rank,
+                    price: nft.price,
+                    attributes: nft.attributes,
+                    magicEdenUrl: nft.magicEdenUrl,
+                    isReal: nft.isReal
+                }
+            };
+
+            GameState.rabbits.push(newRabbit);
+            saveGame();
+            renderRabbitCollection();
+        }
+    } else {
+        // Fallback: Old crate system
+        const rand = Math.random() * 100;
+        let rarity = 'common';
+        let cumulative = 0;
+
+        for (const [rar, rate] of Object.entries(CRATE_DROP_RATES)) {
+            cumulative += rate;
+            if (rand < cumulative) {
+                rarity = rar;
+                break;
+            }
+        }
+
+        const typeIndex = Math.floor(Math.random() * RABBIT_DATA.types.length);
+        const typeId = RABBIT_DATA.types[typeIndex].id;
+
+        const newRabbit = {
+            id: `rabbit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            typeId: typeId,
+            rarity: rarity,
+            level: 1
+        };
+
+        GameState.rabbits.push(newRabbit);
+        saveGame();
+        updateUI();
+        showCrateResult(newRabbit);
+    }
 }
 
 function showCrateResult(rabbit) {
@@ -1485,9 +2118,257 @@ function unassignRabbit(rabbitId) {
     hideAssignMenu();
 }
 
-// ============================================
+// ==
+// TIER 2 BUILDING MECHANICS
+// ==
+
+// Ingredient types for Mystic Garden
+const INGREDIENT_TYPES = [
+    { id: 'moonpetal', name: 'Moon Petal', rarity: 'common', color: '#9b59b6' },
+    { id: 'sunroot', name: 'Sun Root', rarity: 'common', color: '#f39c12' },
+    { id: 'starleaf', name: 'Star Leaf', rarity: 'rare', color: '#3498db' },
+    { id: 'crystaldust', name: 'Crystal Dust', rarity: 'rare', color: '#1abc9c' },
+    { id: 'dragonbloom', name: 'Dragon Bloom', rarity: 'epic', color: '#e74c3c' },
+    { id: 'phoenixash', name: 'Phoenix Ash', rarity: 'legendary', color: '#f1c40f' }
+];
+
+function processTier2Buildings() {
+    GameState.buildings.forEach(building => {
+        if (!building.tier || building.tier !== 2 || building.level === 0) return;
+
+        switch (building.special) {
+            case 'gems':
+                // Crystal Cavern: Generate gems slowly
+                const gemAmount = building.gemRate * building.level;
+                GameState.gems = (GameState.gems || 0) + gemAmount;
+                break;
+
+            case 'xp':
+                // Rabbit Academy: Generate XP for rabbits
+                const xpAmount = building.xpRate * building.level;
+                GameState.rabbitXP = (GameState.rabbitXP || 0) + xpAmount;
+                break;
+
+            case 'offline':
+                // Time Warp Tower: Bonus calculated in offline progress function
+                // No tick action needed
+                break;
+
+            case 'ingredients':
+                // Mystic Garden: Random ingredient drops
+                const dropChance = building.dropChance * building.level;
+                if (Math.random() < dropChance) {
+                    const ingredient = getRandomIngredient();
+                    if (!GameState.ingredients) GameState.ingredients = [];
+                    GameState.ingredients.push({
+                        ...ingredient,
+                        id: ingredient.id + '_' + Date.now(),
+                        obtainedAt: Date.now()
+                    });
+                    showNotification(`Found ${ingredient.name}!`, ingredient.color);
+                }
+                break;
+        }
+    });
+
+    // Update Tier 2 currency display
+    updateTier2Display();
+}
+
+function getRandomIngredient() {
+    // Weighted random based on rarity
+    const roll = Math.random();
+    if (roll < 0.01) {
+        return INGREDIENT_TYPES.find(i => i.rarity === 'legendary');
+    } else if (roll < 0.05) {
+        return INGREDIENT_TYPES.find(i => i.rarity === 'epic');
+    } else if (roll < 0.25) {
+        const rares = INGREDIENT_TYPES.filter(i => i.rarity === 'rare');
+        return rares[Math.floor(Math.random() * rares.length)];
+    } else {
+        const commons = INGREDIENT_TYPES.filter(i => i.rarity === 'common');
+        return commons[Math.floor(Math.random() * commons.length)];
+    }
+}
+
+function getTimeWarpBonus() {
+    const tower = GameState.buildings.find(b => b.id === 'time-warp-tower');
+    if (!tower || tower.level === 0) return 1;
+    return 1 + (tower.offlineBonus * tower.level);
+}
+
+function updateTier2Display() {
+    const gemsEl = document.getElementById('gems-display');
+    const xpEl = document.getElementById('rabbit-xp-display');
+    const ingredientsEl = document.getElementById('ingredients-count');
+    const tier2Container = document.getElementById('tier2-currencies');
+
+    if (gemsEl) gemsEl.textContent = Math.floor(GameState.gems || 0);
+    if (xpEl) xpEl.textContent = Math.floor(GameState.rabbitXP || 0);
+    if (ingredientsEl) ingredientsEl.textContent = (GameState.ingredients || []).length;
+
+    // Show Tier 2 currencies bar if any Tier 2 building is unlocked
+    if (tier2Container) {
+        const anyTier2Unlocked = GameState.buildings.some(b => b.tier === 2 && b.unlocked);
+        if (anyTier2Unlocked) {
+            tier2Container.classList.remove('hidden');
+        }
+    }
+}
+
+function showNotification(message, color = '#f1c40f') {
+    const container = document.getElementById('notification-container');
+    if (!container) return;
+
+    const notification = document.createElement('div');
+    notification.className = 'game-notification';
+    notification.style.cssText = `
+        background: ${color}22;
+        border: 2px solid ${color};
+        color: ${color};
+        padding: 10px 20px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s;
+    `;
+    notification.textContent = message;
+    container.appendChild(notification);
+
+    setTimeout(() => notification.remove(), 3000);
+}
+
+// ==
+// TIER 3 BUILDINGS - Endgame Special Mechanics
+// ==
+function processTier3Buildings() {
+    GameState.buildings.forEach(building => {
+        if (!building.tier || building.tier !== 3 || building.level === 0) return;
+
+        switch (building.special) {
+            case 'worlds':
+                // Dimensional Portal: Unlock alternate worlds for global production bonus
+                const worldProgress = building.worldBonus * building.level * Math.random();
+                if (worldProgress > 0.99) {
+                    // Rare chance to unlock a new world
+                    const prevWorlds = GameState.worldsUnlocked || 0;
+                    GameState.worldsUnlocked = prevWorlds + 1;
+                    showNotification(`New World Unlocked! (#${GameState.worldsUnlocked})`, '#e74c3c');
+                }
+                break;
+
+            case 'crafting':
+                // Legendary Forge: Craft legendary rabbits from gems + ingredients
+                // This is triggered via a button, not passive - just track crafting XP
+                const craftXP = building.craftChance * building.level * 0.1;
+                GameState.craftingXP = (GameState.craftingXP || 0) + craftXP;
+                break;
+
+            case 'staking':
+                // Burrow Bank: Earn interest on staked Burrow Tokens
+                const interest = (GameState.stakedTokens || 0) * building.interestRate * building.level;
+                GameState.burrowTokens = (GameState.burrowTokens || 0) + interest;
+                break;
+
+            case 'infinity':
+                // Infinity Engine: True endgame scaling
+                const infinityProgress = building.infinityMultiplier * building.level * 0.001;
+                GameState.infinityLevel = (GameState.infinityLevel || 0) + infinityProgress;
+                break;
+        }
+    });
+
+    updateTier3Display();
+}
+
+function getWorldBonus() {
+    // Each unlocked world adds 25% global production
+    const worlds = GameState.worldsUnlocked || 0;
+    return 1 + (worlds * 0.25);
+}
+
+function getInfinityMultiplier() {
+    // Infinity level provides exponential multiplier
+    const infinity = GameState.infinityLevel || 0;
+    return 1 + (infinity * 0.1); // 10% per infinity level
+}
+
+function stakeTokens(amount) {
+    if (amount <= 0 || amount > GameState.burrowTokens) return false;
+    GameState.burrowTokens -= amount;
+    GameState.stakedTokens = (GameState.stakedTokens || 0) + amount;
+    showNotification(`Staked ${amount} Burrow Tokens!`, '#3498db');
+    saveGame();
+    return true;
+}
+
+function unstakeTokens(amount) {
+    if (amount <= 0 || amount > (GameState.stakedTokens || 0)) return false;
+    GameState.stakedTokens -= amount;
+    GameState.burrowTokens += amount;
+    showNotification(`Unstaked ${amount} Burrow Tokens!`, '#9b59b6');
+    saveGame();
+    return true;
+}
+
+function craftLegendaryRabbit() {
+    // Requires: 100 gems + 5 epic ingredients + level 50 Legendary Forge
+    const forge = GameState.buildings.find(b => b.id === 'legendary-forge');
+    if (!forge || forge.level < 50) {
+        showNotification('Need Legendary Forge level 50!', '#e74c3c');
+        return false;
+    }
+
+    const gemCost = 100;
+    const ingredientCost = 5;
+    const epicIngredients = (GameState.ingredients || []).filter(i => i.rarity === 'epic' || i.rarity === 'legendary');
+
+    if ((GameState.gems || 0) < gemCost) {
+        showNotification(`Need ${gemCost} Gems!`, '#e74c3c');
+        return false;
+    }
+    if (epicIngredients.length < ingredientCost) {
+        showNotification(`Need ${ingredientCost} Epic/Legendary Ingredients!`, '#e74c3c');
+        return false;
+    }
+
+    // Spend resources
+    GameState.gems -= gemCost;
+    for (let i = 0; i < ingredientCost; i++) {
+        const idx = GameState.ingredients.findIndex(ing => ing.rarity === 'epic' || ing.rarity === 'legendary');
+        if (idx >= 0) GameState.ingredients.splice(idx, 1);
+    }
+
+    // Create legendary rabbit
+    GameState.legendaryRabbitsCrafted = (GameState.legendaryRabbitsCrafted || 0) + 1;
+    showNotification(`Crafted Legendary Rabbit #${GameState.legendaryRabbitsCrafted}!`, '#f1c40f');
+    saveGame();
+    return true;
+}
+
+function updateTier3Display() {
+    const worldsEl = document.getElementById('worlds-display');
+    const legendaryEl = document.getElementById('legendary-rabbits-display');
+    const stakedEl = document.getElementById('staked-tokens-display');
+    const infinityEl = document.getElementById('infinity-display');
+    const tier3Container = document.getElementById('tier3-currencies');
+
+    if (worldsEl) worldsEl.textContent = GameState.worldsUnlocked || 0;
+    if (legendaryEl) legendaryEl.textContent = GameState.legendaryRabbitsCrafted || 0;
+    if (stakedEl) stakedEl.textContent = Math.floor(GameState.stakedTokens || 0);
+    if (infinityEl) infinityEl.textContent = (GameState.infinityLevel || 0).toFixed(2);
+
+    // Show Tier 3 currencies bar if any Tier 3 building is unlocked
+    if (tier3Container) {
+        const anyTier3Unlocked = GameState.buildings.some(b => b.tier === 3 && b.unlocked);
+        if (anyTier3Unlocked) {
+            tier3Container.classList.remove('hidden');
+        }
+    }
+}
+
+// ==
 // GAME LOOP
-// ============================================
+// ==
 let lastTick = Date.now();
 const TICK_RATE = 1000; // 1 second
 
@@ -1502,6 +2383,10 @@ function gameLoop() {
         checkUnlocks();
         checkSpinCooldown();
         checkFlipCooldown();
+        checkRumbleCooldown();
+        checkExpeditionStatus();
+        processTier2Buildings(); // Tier 2 special mechanics
+        processTier3Buildings(); // Tier 3 endgame mechanics
     }
 
     requestAnimationFrame(gameLoop);
@@ -1510,9 +2395,9 @@ function gameLoop() {
 // Auto-save every 30 seconds
 setInterval(saveGame, 30000);
 
-// ============================================
+// ==
 // TAB SYSTEM (Epic 7)
-// ============================================
+// ==
 let currentTab = 'empire';
 
 function switchTab(tabName) {
@@ -1578,7 +2463,7 @@ function renderGrasslandScene() {
         'energy-extractor.png'
     ];
 
-    GameState.buildings.forEach((building, index) => {
+    GameState.buildings.slice(0, 5).forEach((building, index) => {
         console.log(`  Building ${index}: ${building.name}, unlocked: ${building.unlocked}, position: ${positions[index].x}, ${positions[index].y}`);
 
         const buildingEl = document.createElement('div');
@@ -1734,9 +2619,9 @@ function hideBuildingPanel() {
     currentPanelBuilding = null;
 }
 
-// ============================================
+// ==
 // WALKING RABBIT ANIMATION
-// ============================================
+// ==
 let walkingRabbits = [];
 
 function spawnWalkingRabbit() {
@@ -1800,9 +2685,9 @@ function initWalkingRabbits() {
     setTimeout(() => spawnWalkingRabbit(), 5000);
 }
 
-// ============================================
+// ==
 // PARTICLE EFFECTS
-// ============================================
+// ==
 
 function spawnCollectParticles(x, y) {
     const scene = document.getElementById('grassland-scene');
@@ -2081,9 +2966,9 @@ function updateInfoBar() {
 }
 
 
-// ============================================
+// ==
 // SHOP SYSTEM
-// ============================================
+// ==
 
 function openShop() {
     const modal = document.getElementById('shop-modal');
@@ -2240,9 +3125,9 @@ function hasNoAds() {
     return Date.now() < GameState.noAdsUntil;
 }
 
-// ============================================
+// ==
 // INITIALIZATION
-// ============================================
+// ==
 function init() {
     console.log('🐰 Stoned Rabbits: Idle Empire - Initializing...');
 
@@ -2377,6 +3262,7 @@ function init() {
     const flipCard = document.getElementById('flip-card');
     if (flipCard) flipCard.onclick = flipCoin;
 
+
     // Rabbit Manager (legacy)
     const rabbitsBtn = document.getElementById('rabbits-btn');
     if (rabbitsBtn) rabbitsBtn.onclick = showRabbitsModal;
@@ -2390,6 +3276,17 @@ function init() {
     // Building Panel close button (new grassland UI)
     const closePanelBtn = document.getElementById('close-panel-btn');
     if (closePanelBtn) closePanelBtn.onclick = hideBuildingPanel;
+
+    // Rumble Battle & Expedition
+    const rumbleBtn = document.getElementById('rumble-btn');
+    if (rumbleBtn) rumbleBtn.onclick = startRumble;
+    const rumbleCard = document.getElementById('rumble-card');
+    if (rumbleCard) rumbleCard.onclick = startRumble;
+    const expeditionBtn = document.getElementById('expedition-btn');
+    if (expeditionBtn) expeditionBtn.onclick = startExpedition;
+    const expeditionCard = document.getElementById('expedition-card');
+    if (expeditionCard) expeditionCard.onclick = startExpedition;
+
 
     // Expose assign helpers globally for onclick
     window.openAssignMenu = openAssignMenu;
@@ -2443,8 +3340,13 @@ function init() {
     // Start game loop
     gameLoop();
 
+
     // Start walking rabbits animation
     initWalkingRabbits();
+
+    // Check if tutorial needed for new players
+    checkTutorial();
+
 
     console.log('🐰 Game initialized!');
 }
@@ -2462,7 +3364,178 @@ window.addEventListener('visibilitychange', () => {
     if (document.hidden) saveGame();
 });
 
+// ==
+// TUTORIAL SYSTEM
+// ==
+const TUTORIAL_STEPS = [
+    {
+        id: 'welcome',
+        title: 'Welcome to Stoned Rabbits!',
+        text: 'Build your Magic Dust empire with cute stoned rabbits! Tap to continue.',
+        highlight: null
+    },
+    {
+        id: 'collect',
+        title: 'Collect Magic Dust',
+        text: 'Your Rabbit Farm produces Magic Dust. Tap "Collect" to gather it!',
+        highlight: 'btn-collect-0'
+    },
+    {
+        id: 'upgrade',
+        title: 'Upgrade Buildings',
+        text: 'Use Magic Dust to upgrade buildings and increase production.',
+        highlight: 'btn-upgrade-0'
+    },
+    {
+        id: 'minigames',
+        title: 'Play Mini-Games',
+        text: 'Spin the wheel, flip coins, battle, and send expeditions for bonuses!',
+        highlight: 'wheel-card'
+    },
+    {
+        id: 'rabbits',
+        title: 'Collect Rabbits',
+        text: 'Open crates to get NFT rabbits. Assign them to buildings for multipliers!',
+        highlight: null
+    },
+    {
+        id: 'prestige',
+        title: 'Ascend for Power',
+        text: 'Once you earn enough, Ascend to get Burrow Tokens and unlock talents!',
+        highlight: null
+    },
+    {
+        id: 'done',
+        title: 'You\'re Ready!',
+        text: 'Build your empire, collect rare rabbits, and become the ultimate tycoon!',
+        highlight: null
+    }
+];
+
+let tutorialStep = 0;
+
+function showTutorial() {
+    // Check if tutorial already completed
+    if (localStorage.getItem('tutorialCompleted') === 'true') return;
+
+    // Create tutorial overlay if not exists
+    let overlay = document.getElementById('tutorial-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'tutorial-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        overlay.innerHTML = `
+            <div id="tutorial-box" style="
+                background: linear-gradient(135deg, #1a1a2e, #16213e);
+                border: 3px solid var(--accent-gold);
+                border-radius: 20px;
+                padding: 30px;
+                max-width: 350px;
+                text-align: center;
+                box-shadow: 0 0 30px rgba(241, 196, 15, 0.4);
+            ">
+                <img src="rabbit-captain.jpg" style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--accent-gold); margin-bottom: 15px;">
+                <h2 id="tutorial-title" style="color: var(--accent-gold); margin-bottom: 10px;"></h2>
+                <p id="tutorial-text" style="color: #fff; font-size: 1rem; line-height: 1.5; margin-bottom: 20px;"></p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button id="tutorial-skip" style="
+                        background: #444; color: #888;
+                        border: none; padding: 10px 20px;
+                        border-radius: 8px; cursor: pointer;
+                    ">Skip</button>
+                    <button id="tutorial-next" style="
+                        background: linear-gradient(135deg, #f1c40f, #d35400);
+                        color: #000; font-weight: bold;
+                        border: none; padding: 10px 30px;
+                        border-radius: 8px; cursor: pointer;
+                    ">Next</button>
+                </div>
+                <div id="tutorial-progress" style="margin-top: 15px; color: #666; font-size: 0.8rem;"></div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        document.getElementById('tutorial-next').onclick = advanceTutorial;
+        document.getElementById('tutorial-skip').onclick = completeTutorial;
+    }
+
+    overlay.classList.remove('hidden');
+    overlay.style.display = 'flex';
+    renderTutorialStep();
+}
+
+function renderTutorialStep() {
+    const step = TUTORIAL_STEPS[tutorialStep];
+    if (!step) return;
+
+    document.getElementById('tutorial-title').textContent = step.title;
+    document.getElementById('tutorial-text').textContent = step.text;
+    document.getElementById('tutorial-progress').textContent = `${tutorialStep + 1} / ${TUTORIAL_STEPS.length}`;
+
+    // Update button text for last step
+    const nextBtn = document.getElementById('tutorial-next');
+    if (tutorialStep === TUTORIAL_STEPS.length - 1) {
+        nextBtn.textContent = 'Start Playing!';
+    } else {
+        nextBtn.textContent = 'Next';
+    }
+
+    // Remove all previous highlights
+    document.querySelectorAll('.tutorial-highlight').forEach(el => {
+        el.classList.remove('tutorial-highlight');
+    });
+
+    // Add highlight if specified
+    if (step.highlight) {
+        const highlightEl = document.getElementById(step.highlight);
+        if (highlightEl) {
+            highlightEl.classList.add('tutorial-highlight');
+            highlightEl.style.position = 'relative';
+            highlightEl.style.zIndex = '2001';
+        }
+    }
+}
+
+function advanceTutorial() {
+    tutorialStep++;
+    if (tutorialStep >= TUTORIAL_STEPS.length) {
+        completeTutorial();
+    } else {
+        renderTutorialStep();
+    }
+}
+
+function completeTutorial() {
+    localStorage.setItem('tutorialCompleted', 'true');
+    const overlay = document.getElementById('tutorial-overlay');
+    if (overlay) overlay.style.display = 'none';
+
+    // Remove all highlights
+    document.querySelectorAll('.tutorial-highlight').forEach(el => {
+        el.classList.remove('tutorial-highlight');
+        el.style.zIndex = '';
+    });
+
+    showNumberPop('Good luck! 🐰');
+}
+
+// Start tutorial for new players
+function checkTutorial() {
+    if (localStorage.getItem('tutorialCompleted') !== 'true') {
+        setTimeout(showTutorial, 1500); // Show after 1.5s
+    }
+}
+
 // DEBUGGING EXPORTS
 window.GameState = GameState;
+window.showTutorial = showTutorial; // Allow manual trigger
 window.activateBoost = activateBoost;
 window.resetGame = resetGame;

@@ -32,9 +32,9 @@
 
 body {
     font-family: 'Outfit', 'Segoe UI', sans-serif;
-    /* Try a modern font if available */
-    background: linear-gradient(180deg, #4ECDC4 0%, #44A08D 50%, #2E8B57 100%);
-    /* Teal to forest green - vibrant like mockups */
+    /* Fantasy Background */
+    background: linear-gradient(rgba(32, 44, 57, 0.7), rgba(32, 44, 57, 0.7)), url('background.png') no-repeat center center fixed;
+    background-size: cover;
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
@@ -598,7 +598,8 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 20000;
+    backdrop-filter: blur(5px);
 }
 
 .modal.hidden {
@@ -608,6 +609,154 @@ body {
 /* Global hidden utility */
 .hidden {
     display: none !important;
+}
+
+/* ============================================
+   TIER 2 CURRENCIES & NOTIFICATIONS
+   ============================================ */
+
+#tier2-currencies {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 20px;
+}
+
+.tier2-currency {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#notification-container {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    max-width: 300px;
+}
+
+.game-notification {
+    background: rgba(241, 196, 15, 0.15);
+    border: 2px solid var(--accent-gold);
+    color: var(--accent-gold);
+    padding: 10px 20px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+/* Tier 2 Building Styling */
+.building-card.tier-2 {
+    border: 2px solid #9b59b6;
+    background: linear-gradient(135deg, var(--bg-card), #3c2a5a);
+}
+
+.building-card.tier-2 .building-name {
+    color: #d4a5f9;
+}
+
+.tier-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #9b59b6;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+/* ============================================
+   TIER 3 CURRENCIES & BUILDINGS (Endgame)
+   ============================================ */
+
+#tier3-currencies {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 6px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.2), rgba(155, 89, 182, 0.2));
+    border-radius: 20px;
+    border: 1px solid rgba(231, 76, 60, 0.4);
+}
+
+.tier3-currency {
+    font-size: 0.8rem;
+    color: #e74c3c;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    text-shadow: 0 0 8px rgba(231, 76, 60, 0.5);
+}
+
+/* Tier 3 Building Styling */
+.building-card.tier-3 {
+    border: 2px solid #e74c3c;
+    background: linear-gradient(135deg, var(--bg-card), #4a1a1a);
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.3);
+}
+
+.building-card.tier-3 .building-name {
+    color: #ff6b6b;
+    text-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+}
+
+.building-card.tier-3 .tier-badge {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    animation: tier3Pulse 2s infinite;
+}
+
+@keyframes tier3Pulse {
+    0%, 100% { box-shadow: 0 0 5px rgba(231, 76, 60, 0.5); }
+    50% { box-shadow: 0 0 15px rgba(231, 76, 60, 0.8); }
+}
+
+/* Infinity Symbol Animation */
+#infinity-display {
+    font-weight: bold;
+    background: linear-gradient(90deg, #e74c3c, #9b59b6, #3498db, #e74c3c);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: infinityGradient 3s linear infinite;
+}
+
+@keyframes infinityGradient {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
 }
 
 .modal-content {
@@ -2029,4 +2178,203 @@ input[type="checkbox"] {
         padding: 12px 18px;
         font-size: 1rem;
     }
+}
+
+/* ============================================
+   NFT CRATE SYSTEM STYLES
+   ============================================ */
+.crate-modal-content {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 3px solid var(--accent-gold);
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+}
+
+.crate-box {
+    width: 120px;
+    height: 100px;
+    margin: 0 auto 20px;
+    position: relative;
+    perspective: 500px;
+}
+
+.crate-body {
+    width: 100%;
+    height: 80px;
+    background: linear-gradient(180deg, #8B4513 0%, #654321 100%);
+    border: 3px solid #5D3A1A;
+    border-radius: 5px;
+    position: absolute;
+    bottom: 0;
+    box-shadow: inset 0 -10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.crate-lid {
+    width: 110%;
+    height: 30px;
+    background: linear-gradient(180deg, #A0522D 0%, #8B4513 100%);
+    border: 3px solid #5D3A1A;
+    border-radius: 5px 5px 0 0;
+    position: absolute;
+    top: 0;
+    left: -5%;
+    transform-origin: bottom;
+    transition: transform 0.5s ease;
+}
+
+.crate-box.shaking {
+    animation: crateShake 0.5s infinite;
+}
+
+.crate-box.opened .crate-lid {
+    transform: rotateX(-120deg);
+}
+
+@keyframes crateShake {
+
+    0%,
+    100% {
+        transform: translateX(0) rotate(0);
+    }
+
+    25% {
+        transform: translateX(-5px) rotate(-2deg);
+    }
+
+    75% {
+        transform: translateX(5px) rotate(2deg);
+    }
+}
+
+.crate-loading {
+    color: var(--accent-gold);
+    font-size: 1.2rem;
+    margin-top: 20px;
+}
+
+/* NFT Reveal */
+.nft-reveal {
+    animation: nftReveal 0.5s ease-out;
+}
+
+@keyframes nftReveal {
+    0% {
+        opacity: 0;
+        transform: scale(0.5) translateY(20px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.nft-image-container {
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 15px;
+    border-radius: 15px;
+    border: 4px solid var(--accent-gold);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 30px rgba(255, 203, 5, 0.4);
+}
+
+.nft-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.rarity-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: white;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.nft-name {
+    font-size: 1.4rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.nft-rank {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+.nft-price {
+    color: var(--accent-green);
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.nft-attributes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.attribute {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.nft-multiplier {
+    color: var(--accent-gold);
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+.nft-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.btn-magic-eden {
+    background: linear-gradient(135deg, #e42575 0%, #c21858 100%);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: transform 0.2s;
+}
+
+.btn-magic-eden:hover {
+    transform: scale(1.05);
+}
+
+.btn-close-crate {
+    background: var(--accent-green);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.btn-close-crate:hover {
+    filter: brightness(1.1);
 }

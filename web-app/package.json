@@ -104,6 +104,7 @@
     "terser": "^5.44.1"
   },
   "scripts": {
+    "build": "node build.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
